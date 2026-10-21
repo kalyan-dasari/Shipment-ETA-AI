@@ -22,8 +22,8 @@ def generate_shipments(n: int = 300, seed: int = 42) -> pd.DataFrame:
       Port delay & port congestion -> Customs clearance delay
       Customs delay & local weather -> Final delivery / inland transit delay
     """
-    if n < 30:
-        raise ValueError("n must be at least 30 to support a meaningful train/test split")
+    if n < 1:
+        raise ValueError("n must be at least 1")
     rng = np.random.default_rng(seed)
     origins = np.array(["Shanghai", "Singapore", "Mumbai", "Rotterdam", "Los Angeles", "Busan"])
     destinations = np.array(["Rotterdam", "Sydney", "Dubai", "New York", "Hamburg", "Antwerp"])
