@@ -1,0 +1,37 @@
+{
+  "dataset_rows": 300,
+  "train_rows": 225,
+  "test_rows": 75,
+  "mae_hours": 9.885,
+  "rmse_hours": 12.667,
+  "r2_score": 0.425,
+  "baseline_mae_hours": 11.534,
+  "baseline_rmse_hours": 14.179,
+  "naive_baseline_mae_hours": 29.169,
+  "mae_improvement_percent": 14.3,
+  "late_threshold_hours": 24.0,
+  "classification": {
+    "accuracy": 0.84,
+    "precision": 0.873,
+    "recall": 0.954,
+    "f1_score": 0.912,
+    "roc_auc": 0.78
+  },
+  "feature_importances": {
+    "port_congestion": 0.2137,
+    "observed_delay_at_port_hours": 0.1438,
+    "congestion_weather_interaction": 0.1344,
+    "sailing_delay_hours": 0.096,
+    "upstream_delay_ratio": 0.0777,
+    "congestion_buffer_ratio": 0.0748,
+    "departure_delay_hours": 0.0649,
+    "weather_severity": 0.0435,
+    "planned_port_hours": 0.0385,
+    "planned_remaining_hours_at_port": 0.0314,
+    "planned_final_hours": 0.0297,
+    "planned_customs_hours": 0.0261,
+    "planned_sailing_hours": 0.0255
+  },
+  "trained_at_utc": "2026-10-21T07:00:52.681763+00:00",
+  "note": "Synthetic demonstration dataset; metrics reflect consistency with simulation mechanics."
+}
