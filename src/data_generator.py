@@ -46,7 +46,7 @@ def generate_shipments(n: int = 300, seed: int = 42) -> pd.DataFrame:
     destinations = np.array(["Rotterdam", "Sydney", "Dubai", "New York", "Hamburg", "Antwerp"])
     ports = np.array(["Port Alpha (Singapore)", "Port Beta (Rotterdam)", "Port Gamma (Los Angeles)", "Port Delta (Dubai)", "Port Epsilon (Busan)"])
     priorities = np.array(["Standard", "Express", "Economy"])
-    start = pd.Timestamp("2025-01-01", tz="UTC")
+    start = pd.Timestamp("2025-01-01 00:00:00", tz="UTC")
     rows = []
 
     for i in range(n):
@@ -64,7 +64,7 @@ def generate_shipments(n: int = 300, seed: int = 42) -> pd.DataFrame:
         # ---------------------------------------------------------
         # 1. Planned Durations (hours, rounded to 2 decimals)
         # ---------------------------------------------------------
-        scheduled_departure = start + pd.Timedelta(hours=int(rng.integers(0, 24 * 365)))
+        scheduled_departure = (start + pd.Timedelta(hours=int(rng.integers(0, 24 * 365)))).floor("s")
         planned_sailing = round(float(rng.uniform(72, 360)), 2)
         planned_port = round(float(rng.uniform(8, 36)), 2)
         planned_customs = round(float(rng.uniform(4, 24)), 2)
@@ -72,7 +72,7 @@ def generate_shipments(n: int = 300, seed: int = 42) -> pd.DataFrame:
         
         # Scheduled Arrival = Scheduled Departure + sum of planned stage durations
         planned_total_hours = round(planned_sailing + planned_port + planned_customs + planned_final, 2)
-        scheduled_arrival = scheduled_departure + pd.to_timedelta(planned_total_hours, unit="h")
+        scheduled_arrival = (scheduled_departure + pd.to_timedelta(planned_total_hours, unit="h")).floor("s")
 
         # ---------------------------------------------------------
         # 2. Environmental & Operational Signals (0.0 to 1.0)
@@ -110,19 +110,19 @@ def generate_shipments(n: int = 300, seed: int = 42) -> pd.DataFrame:
         remaining_delay_at_checkpoint = round(port_delay + customs_delay + final_delay, 2)
 
         # ---------------------------------------------------------
-        # 5. Planned vs Actual Timestamps (Chronological Event Sequencing)
+        # 5. Planned vs Actual Timestamps (Chronological Event Sequencing, second precision)
         # ---------------------------------------------------------
         # Planned timeline
-        planned_port_arrival = scheduled_departure + pd.to_timedelta(planned_sailing, unit="h")
-        planned_port_departure = planned_port_arrival + pd.to_timedelta(planned_port, unit="h")
-        planned_customs_done = planned_port_departure + pd.to_timedelta(planned_customs, unit="h")
+        planned_port_arrival = (scheduled_departure + pd.to_timedelta(planned_sailing, unit="h")).floor("s")
+        planned_port_departure = (planned_port_arrival + pd.to_timedelta(planned_port, unit="h")).floor("s")
+        planned_customs_done = (planned_port_departure + pd.to_timedelta(planned_customs, unit="h")).floor("s")
 
-        # Actual timeline (using exact rounded incremental additions)
-        actual_departure = scheduled_departure + pd.to_timedelta(departure_delay, unit="h")
-        actual_port_arrival = planned_port_arrival + pd.to_timedelta(cum_delay_port_arrival, unit="h")
-        actual_port_departure = planned_port_departure + pd.to_timedelta(cum_delay_port_departure, unit="h")
-        actual_customs_done = planned_customs_done + pd.to_timedelta(cum_delay_customs_done, unit="h")
-        actual_delivery = scheduled_arrival + pd.to_timedelta(total_delay, unit="h")
+        # Actual timeline
+        actual_departure = (scheduled_departure + pd.to_timedelta(departure_delay, unit="h")).floor("s")
+        actual_port_arrival = (planned_port_arrival + pd.to_timedelta(cum_delay_port_arrival, unit="h")).floor("s")
+        actual_port_departure = (planned_port_departure + pd.to_timedelta(cum_delay_port_departure, unit="h")).floor("s")
+        actual_customs_done = (planned_customs_done + pd.to_timedelta(cum_delay_customs_done, unit="h")).floor("s")
+        actual_delivery = (scheduled_arrival + pd.to_timedelta(total_delay, unit="h")).floor("s")
 
         rows.append({
             "shipment_id": f"SHP-{i+1:04d}",
@@ -136,8 +136,8 @@ def generate_shipments(n: int = 300, seed: int = 42) -> pd.DataFrame:
             "port": port,
             
             # Key milestones & environmental indicators
-            "scheduled_departure": scheduled_departure,
-            "scheduled_arrival": scheduled_arrival,
+            "scheduled_departure": scheduled_departure.isoformat(),
+            "scheduled_arrival": scheduled_arrival.isoformat(),
             "port_congestion": congestion,
             "weather_severity": weather,
             
@@ -169,17 +169,17 @@ def generate_shipments(n: int = 300, seed: int = 42) -> pd.DataFrame:
             "actual_total_delay_hours": total_delay,                  # Target variable
             "actual_remaining_delay_hours": remaining_delay_at_checkpoint,
 
-            # Planned event timestamps
-            "planned_port_arrival": planned_port_arrival,
-            "planned_port_departure": planned_port_departure,
-            "planned_customs_done": planned_customs_done,
+            # Planned event timestamps (clean ISO strings)
+            "planned_port_arrival": planned_port_arrival.isoformat(),
+            "planned_port_departure": planned_port_departure.isoformat(),
+            "planned_customs_done": planned_customs_done.isoformat(),
 
-            # Actual event timestamps
-            "actual_departure": actual_departure,
-            "actual_port_arrival": actual_port_arrival,
-            "actual_port_departure": actual_port_departure,
-            "actual_customs_done": actual_customs_done,
-            "actual_delivery": actual_delivery,
+            # Actual event timestamps (clean ISO strings)
+            "actual_departure": actual_departure.isoformat(),
+            "actual_port_arrival": actual_port_arrival.isoformat(),
+            "actual_port_departure": actual_port_departure.isoformat(),
+            "actual_customs_done": actual_customs_done.isoformat(),
+            "actual_delivery": actual_delivery.isoformat(),
 
             # Binary classification target (late if total incremental delay > 24 hours)
             "late_delivery": int(total_delay > 24.0),
@@ -236,11 +236,11 @@ def validate_shipments_dataset(df: pd.DataFrame) -> None:
         raise ValueError(f"Upstream delay sum does not match observed_delay_at_port_hours for {mismatch_up.sum()} rows")
 
     # 4. Chronological ordering check
-    sched_dep = pd.to_datetime(df["scheduled_departure"], utc=True)
-    sched_arr = pd.to_datetime(df["scheduled_arrival"], utc=True)
-    act_dep = pd.to_datetime(df["actual_departure"], utc=True)
-    act_arr = pd.to_datetime(df["actual_port_arrival"], utc=True)
-    act_deliv = pd.to_datetime(df["actual_delivery"], utc=True)
+    sched_dep = pd.to_datetime(df["scheduled_departure"], utc=True, format="ISO8601")
+    sched_arr = pd.to_datetime(df["scheduled_arrival"], utc=True, format="ISO8601")
+    act_dep = pd.to_datetime(df["actual_departure"], utc=True, format="ISO8601")
+    act_arr = pd.to_datetime(df["actual_port_arrival"], utc=True, format="ISO8601")
+    act_deliv = pd.to_datetime(df["actual_delivery"], utc=True, format="ISO8601")
 
     if (sched_arr <= sched_dep).any():
         raise ValueError("Scheduled arrival is not after scheduled departure")

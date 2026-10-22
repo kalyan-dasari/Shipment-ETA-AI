@@ -35,8 +35,8 @@ def predict_dataframe(df: pd.DataFrame, bundle: Optional[Dict[str, Any]] = None)
     regressor = bundle["model"]
     predicted_delay = np.maximum(0.0, regressor.predict(X))
 
-    # 2. Confidence interval bounds based on empirical residual quantiles
-    residuals = bundle.get("residual_stats", {"q10": -4.0, "q90": 4.5})
+    # 2. Confidence interval bounds based on Out-Of-Bag empirical residual quantiles
+    residuals = bundle.get("residual_stats", {"q10": -14.94, "q90": 16.76})
     lower_bound = np.maximum(0.0, predicted_delay + residuals["q10"])
     upper_bound = np.maximum(lower_bound, predicted_delay + residuals["q90"])
 
@@ -53,8 +53,11 @@ def predict_dataframe(df: pd.DataFrame, bundle: Optional[Dict[str, Any]] = None)
     out = pd.DataFrame(index=df.index)
     out["shipment_id"] = df.get("shipment_id", [f"SHP-{i+1:04d}" for i in range(len(df))])
     
-    # Scheduled arrival timestamp
-    sched_arrival = pd.to_datetime(df["scheduled_arrival"], utc=True)
+    # Scheduled arrival timestamp (ISO8601 parsing safe across pandas versions)
+    if pd.api.types.is_datetime64_any_dtype(df["scheduled_arrival"]):
+        sched_arrival = pd.to_datetime(df["scheduled_arrival"], utc=True)
+    else:
+        sched_arrival = pd.to_datetime(df["scheduled_arrival"], utc=True, format="ISO8601")
     out["scheduled_arrival"] = sched_arrival
     
     out["predicted_delay_hours"] = np.round(predicted_delay, 2)
