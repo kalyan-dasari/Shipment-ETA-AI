@@ -22,28 +22,27 @@ st.set_page_config(
 # Custom Styling
 st.markdown("""
 <style>
-    /* Modern Dashboard Styling */
     .metric-card {
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
-        padding: 18px 20px;
+        padding: 16px 18px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
         backdrop-filter: blur(10px);
         margin-bottom: 12px;
     }
     .metric-value {
-        font-size: 1.9rem;
+        font-size: 1.8rem;
         font-weight: 700;
         margin: 4px 0;
         color: #f8fafc;
         letter-spacing: -0.5px;
     }
     .metric-label {
-        font-size: 0.82rem;
+        font-size: 0.8rem;
         font-weight: 500;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.8px;
         color: #94a3b8;
     }
     .metric-delta {
@@ -54,9 +53,9 @@ st.markdown("""
         background-color: rgba(239, 68, 68, 0.2);
         color: #f87171;
         border: 1px solid rgba(239, 68, 68, 0.4);
-        padding: 4px 10px;
+        padding: 3px 10px;
         border-radius: 9999px;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         font-weight: 600;
         display: inline-block;
     }
@@ -64,9 +63,9 @@ st.markdown("""
         background-color: rgba(249, 115, 22, 0.2);
         color: #fb923c;
         border: 1px solid rgba(249, 115, 22, 0.4);
-        padding: 4px 10px;
+        padding: 3px 10px;
         border-radius: 9999px;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         font-weight: 600;
         display: inline-block;
     }
@@ -74,9 +73,9 @@ st.markdown("""
         background-color: rgba(234, 179, 8, 0.2);
         color: #facc15;
         border: 1px solid rgba(234, 179, 8, 0.4);
-        padding: 4px 10px;
+        padding: 3px 10px;
         border-radius: 9999px;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         font-weight: 600;
         display: inline-block;
     }
@@ -84,18 +83,34 @@ st.markdown("""
         background-color: rgba(34, 197, 94, 0.2);
         color: #4ade80;
         border: 1px solid rgba(34, 197, 94, 0.4);
-        padding: 4px 10px;
+        padding: 3px 10px;
         border-radius: 9999px;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         font-weight: 600;
         display: inline-block;
     }
+    .checkpoint-banner {
+        background: rgba(30, 41, 59, 0.7);
+        border-left: 4px solid #38bdf8;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-size: 0.9rem;
+    }
+    .operator-action-card {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        border-radius: 10px;
+        padding: 16px;
+        margin-top: 10px;
+        margin-bottom: 14px;
+    }
     .stage-step {
         display: inline-block;
-        padding: 6px 14px;
-        margin: 4px;
+        padding: 5px 12px;
+        margin: 3px;
         border-radius: 8px;
-        font-size: 0.82rem;
+        font-size: 0.8rem;
         font-weight: 600;
     }
     .stage-done {
@@ -104,9 +119,9 @@ st.markdown("""
         border: 1px solid rgba(59, 130, 246, 0.3);
     }
     .stage-current {
-        background: rgba(234, 179, 8, 0.2);
+        background: rgba(234, 179, 8, 0.25);
         color: #fde047;
-        border: 1px solid rgba(234, 179, 8, 0.5);
+        border: 1px solid rgba(234, 179, 8, 0.6);
     }
     .stage-future {
         background: rgba(148, 163, 184, 0.1);
@@ -153,7 +168,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### ⚙️ Model Maintenance")
-    if st.button("🔄 Retrain ML Models", type="primary", use_container_width=True):
+    if st.button("🔄 Retrain ML Models", type="primary", width="stretch"):
         with st.spinner("Retraining Random Forest Ensemble and Probability Calibrator..."):
             train(str(DATA_PATH), str(MODEL_PATH), late_threshold_hours=delay_threshold)
             st.cache_resource.clear()
@@ -161,8 +176,8 @@ with st.sidebar:
         st.success("Model successfully retrained and cached!")
         st.rerun()
 
-    if st.button("🎲 Regenerate Dataset", use_container_width=True):
-        with st.spinner("Generating 300 synthetic shipments with linked stage delays..."):
+    if st.button("🎲 Regenerate Dataset", width="stretch"):
+        with st.spinner("Generating 300 validated synthetic shipments with linked stage delays..."):
             save_dataset(str(DATA_PATH), n=300, seed=int(np.random.randint(1, 9999)))
             train(str(DATA_PATH), str(MODEL_PATH), late_threshold_hours=delay_threshold)
             st.cache_resource.clear()
@@ -174,15 +189,17 @@ with st.sidebar:
     try:
         b_info = get_bundle()
         m = b_info["metrics"]
-        st.markdown(f"**Model Type:** Random Forest (300 trees)")
-        st.markdown(f"**Test MAE:** `{m['mae_hours']} h`")
-        st.markdown(f"**Baseline MAE:** `{m['baseline_mae_hours']} h`")
-        st.markdown(f"**Improvement:** `+{m.get('mae_improvement_percent', 14.3)}%`")
-        st.markdown(f"**Late Risk ROC-AUC:** `{m['classification']['roc_auc']}`")
+        st.markdown(f"**Prediction Checkpoint:** Port Arrival")
+        st.markdown(f"**Model Type:** Random Forest Regressor")
+        st.markdown(f"**Test MAE:** `{m['regression']['model_mae_hours']} h`")
+        st.markdown(f"**Baseline MAE:** `{m['regression']['baseline_heuristic_mae_hours']} h`")
+        st.markdown(f"**MAE Improvement:** `+{m['regression']['mae_improvement_percent_vs_heuristic']}%`")
+        st.markdown(f"**Delay Risk ROC-AUC:** `{m['classification']['roc_auc']}`")
+        st.markdown(f"**Empirical CI Coverage:** `{m['prediction_intervals']['empirical_test_coverage']*100:.1f}%`")
     except Exception:
         pass
 
-    st.caption("Developed for Aiqon ETA Intelligence Demonstration.")
+    st.caption("Aiqon Take-Home Assignment · Kalyan Dasari")
 
 # Load Data and Predictions
 try:
@@ -204,7 +221,7 @@ joined["predicted_eta_upper"] = pd.to_datetime(joined["predicted_eta_upper"], ut
 st.title("🚢 Shipment ETA & Delay Propagation Intelligence")
 st.markdown(
     "Predict final delivery ETA, estimate delay risk, and uncover stage-by-stage delay propagation "
-    "at the **Port Arrival Checkpoint** using machine learning."
+    "at the **Port Arrival Checkpoint** using machine learning on synthetic journey data."
 )
 
 # ----------------- TABS -----------------
@@ -304,11 +321,10 @@ with tab1:
                 alt.Tooltip("max(predicted_delay_hours):Q", title="Max Delay (h)", format=".1f"),
             ]
         ).properties(height=260)
-        # Add threshold rule
         rule = alt.Chart(pd.DataFrame({'threshold': [delay_threshold]})).mark_rule(
             color='#ef4444', strokeWidth=2, strokeDash=[4, 4]
         ).encode(x='threshold:Q')
-        st.altair_chart(hist_chart + rule, use_container_width=True)
+        st.altair_chart(hist_chart + rule, width="stretch")
 
     with col_chart2:
         st.markdown("**Average Delay by Primary Trade Lane**")
@@ -322,7 +338,7 @@ with tab1:
                 alt.Tooltip("predicted_delay_hours:Q", title="Avg Delay (h)", format=".1f"),
             ]
         ).properties(height=260)
-        st.altair_chart(route_chart, use_container_width=True)
+        st.altair_chart(route_chart, width="stretch")
 
     # Fleet Data Table
     st.markdown(f"**Matching Shipments ({len(filtered)} records)**")
@@ -344,35 +360,46 @@ with tab1:
             "late_probability": "Late Prob",
             "late_risk": "Risk Status",
         }),
-        use_container_width=True,
+        width="stretch",
         hide_index=True
     )
 
 # =========================================================================
-# TAB 2: SHIPMENT ROOT-CAUSE DEEP-DIVE
+# TAB 2: SHIPMENT ROOT-CAUSE DEEP-DIVE & OPERATOR DECISION SUPPORT
 # =========================================================================
 with tab2:
     st.subheader("Individual Journey Deep-Dive & Root-Cause Attribution")
 
     # Select shipment
     shipment_options = joined["shipment_id"].tolist()
-    default_index = 0
     selected_shp = st.selectbox(
         "Select Shipment to Inspect",
         shipment_options,
-        index=default_index,
+        index=0,
         format_func=lambda sid: f"{sid} — {joined.loc[joined['shipment_id'] == sid, 'route'].iloc[0]} ({joined.loc[joined['shipment_id'] == sid, 'carrier'].iloc[0]})"
     )
 
     row = joined.loc[joined["shipment_id"] == selected_shp].iloc[0]
     single_res = predict_single(row, bundle)
 
+    # Checkpoint Context Banner
+    checkpoint_time = pd.to_datetime(row["actual_port_arrival"]).strftime("%d %b %Y, %H:%M UTC")
+    st.markdown(f"""
+    <div class="checkpoint-banner">
+        📍 <strong>Prediction Checkpoint:</strong> Destination Port Outer Anchorage / Pilot Station Arrival | 
+        <strong>Checkpoint Event Time:</strong> <code>{checkpoint_time}</code><br>
+        <span style="color:#94a3b8; font-size:0.85rem;">
+        Voyage Status: In-Progress. Upstream voyage history (Departure & Sailing) is known. Downstream stages (Port dwell, Customs, Inland delivery) are unknown future outcomes.
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
     # Visual Stage Stepper
     st.markdown(f"""
-    <div style="margin: 10px 0 20px 0;">
+    <div style="margin: 8px 0 16px 0;">
         <span class="stage-step stage-done">✓ 1. Origin Departure ({row['origin']})</span>
         <span style="color:#64748b;">➔</span>
-        <span class="stage-step stage-done">✓ 2. Ocean Transit ({row['sailing_delay_hours']:.1f}h delay)</span>
+        <span class="stage-step stage-done">✓ 2. Ocean Transit ({row['sailing_delay_hours']:.1f}h leg delay)</span>
         <span style="color:#64748b;">➔</span>
         <span class="stage-step stage-current">📍 3. Port Arrival Checkpoint ({row['port']})</span>
         <span style="color:#64748b;">➔</span>
@@ -382,106 +409,196 @@ with tab2:
     </div>
     """, unsafe_allow_html=True)
 
-    # Primary Prediction Cards
-    k1, k2, k3, k4 = st.columns(4)
+    # 1. OBSERVED CHECKPOINT FACTS vs 2. MODEL PREDICTIONS
+    st.markdown("#### 1. Observed Checkpoint Facts (Known Prior to Port Operations)")
+    col_obs1, col_obs2, col_obs3, col_obs4 = st.columns(4)
+    sched_eta = pd.to_datetime(row["scheduled_arrival"])
+    sched_dep = pd.to_datetime(row["scheduled_departure"])
+    obs_delay = float(row["observed_delay_at_port_hours"])
+    plan_rem = float(row["planned_remaining_hours_at_port"])
+
+    with col_obs1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Scheduled Arrival (Original ETA)</div>
+            <div class="metric-value" style="font-size:1.45rem;">{sched_eta.strftime('%d %b, %H:%M')}</div>
+            <div class="metric-delta" style="color:#94a3b8;">Departure: {sched_dep.strftime('%d %b, %H:%M')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_obs2:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Observed Delay So Far</div>
+            <div class="metric-value" style="font-size:1.45rem;">+{obs_delay:.1f} hrs</div>
+            <div class="metric-delta" style="color:#60a5fa;">Departure: {row['departure_delay_hours']:.1f}h | Sailing: {row['sailing_delay_hours']:.1f}h</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_obs3:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Planned Remaining Duration</div>
+            <div class="metric-value" style="font-size:1.45rem;">{plan_rem:.1f} hrs</div>
+            <div class="metric-delta" style="color:#94a3b8;">Port: {row['planned_port_hours']:.0f}h | Cust: {row['planned_customs_hours']:.0f}h | Fin: {row['planned_final_hours']:.0f}h</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_obs4:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Terminal & Route Signals</div>
+            <div class="metric-value" style="font-size:1.45rem;">{row['port_congestion']:.2f} / 1.0</div>
+            <div class="metric-delta" style="color:#cbd5e1;">Congestion: {row['port_congestion']:.2f} | Weather: {row['weather_severity']:.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("#### 2. AI Model In-Flight Predictions (Estimated Future Outcomes)")
+    col_pred1, col_pred2, col_pred3, col_pred4 = st.columns(4)
     pred_eta = pd.to_datetime(single_res["predicted_eta"])
     eta_lower = pd.to_datetime(single_res["predicted_eta_lower"])
     eta_upper = pd.to_datetime(single_res["predicted_eta_upper"])
-    sched_eta = pd.to_datetime(row["scheduled_arrival"])
-
     risk_cat = single_res["late_risk"]
     badge_class = f"badge-{risk_cat.lower()}"
 
-    with k1:
+    with col_pred1:
         st.markdown(f"""
         <div class="metric-card">
             <div class="metric-label">Predicted Final ETA</div>
-            <div class="metric-value">{pred_eta.strftime('%d %b, %H:%M')}</div>
-            <div class="metric-delta" style="color: #60a5fa;">Sched: {sched_eta.strftime('%d %b, %H:%M')}</div>
+            <div class="metric-value" style="font-size:1.45rem; color:#38bdf8;">{pred_eta.strftime('%d %b, %H:%M')}</div>
+            <div class="metric-delta" style="color:#94a3b8;">Band: [{eta_lower.strftime('%d %b %H:%M')} – {eta_upper.strftime('%d %b %H:%M')}]</div>
         </div>
         """, unsafe_allow_html=True)
-    with k2:
+    with col_pred2:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">Estimated Total Delay</div>
-            <div class="metric-value">{single_res['predicted_delay_hours']:.1f} hrs</div>
-            <div class="metric-delta" style="color: #94a3b8;">90% CI: [{single_res['predicted_delay_lower_hours']:.1f}h — {single_res['predicted_delay_upper_hours']:.1f}h]</div>
+            <div class="metric-label">Predicted Total Delay</div>
+            <div class="metric-value" style="font-size:1.45rem;">+{single_res['predicted_delay_hours']:.1f} hrs</div>
+            <div class="metric-delta" style="color:#94a3b8;">Downstream Remaining: +{single_res['predicted_remaining_delay_hours']:.1f}h</div>
         </div>
         """, unsafe_allow_html=True)
-    with k3:
+    with col_pred3:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">Observed vs Remaining</div>
-            <div class="metric-value">{single_res['observed_delay_at_port_hours']:.1f}h | {single_res['predicted_remaining_delay_hours']:.1f}h</div>
-            <div class="metric-delta" style="color: #cbd5e1;">Accumulated Upstream | Expected Downstream</div>
+            <div class="metric-label">Probability of Delay > 24h</div>
+            <div class="metric-value" style="font-size:1.45rem;">{single_res['late_probability'] * 100:.1f}%</div>
+            <div class="metric-delta" style="color:#94a3b8;">Calibrated classification score</div>
         </div>
         """, unsafe_allow_html=True)
-    with k4:
+    with col_pred4:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">Late Probability & Status</div>
-            <div class="metric-value">{single_res['late_probability'] * 100:.1f}%</div>
-            <div><span class="{badge_class}">{risk_cat.upper()} RISK</span></div>
+            <div class="metric-label">Operational Delay Risk Tier</div>
+            <div class="metric-value" style="font-size:1.45rem;"><span class="{badge_class}">{risk_cat.upper()}</span></div>
+            <div class="metric-delta" style="color:#94a3b8;">Thresholds: &lt;25% Low, 25-50% Mod, 50-75% High, &ge;75% Crit</div>
         </div>
         """, unsafe_allow_html=True)
 
-    # Delay Propagation Waterfall and Feature Attribution
+    # 3. OPERATOR ACTION PLAYBOOK (Practical Decision Value)
+    st.markdown("#### 3. 🎯 Logistics Operator Action Playbook (Decision Support)")
+    if risk_cat in ["Critical", "High"]:
+        st.markdown(f"""
+        <div class="operator-action-card" style="border-left: 4px solid #f87171;">
+            <strong style="color:#f87171;">⚠️ High Operational Delay Risk Detected ({single_res['late_probability']*100:.1f}% probability exceeding 24h delay). Recommended Interventions:</strong>
+            <ul style="margin: 8px 0 0 0; font-size: 0.9rem; color: #e2e8f0;">
+                <li><strong>Proactive Consignee Notification:</strong> Alert warehouse receiving and retail consignees of expected revised delivery window (<code>{pred_eta.strftime('%d %b %Y, %H:%M UTC')}</code>) to avoid idle labour costs.</li>
+                <li><strong>Terminal Berthing Intervention:</strong> Port congestion is elevated ({row['port_congestion']:.2f}). Contact local port agent to request priority crane allocation or off-dock container drayage to avoid yard dwell.</li>
+                <li><strong>Pre-lodge Customs Manifests:</strong> Ensure electronic customs documents (EDI) are pre-cleared before container discharge to eliminate regulatory dwell.</li>
+                <li><strong>Inland Transport Rescheduling:</strong> Reschedule rail and truck appointments to prevent costly port demurrage and container detention penalties.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    elif risk_cat == "Moderate":
+        st.markdown(f"""
+        <div class="operator-action-card" style="border-left: 4px solid #facc15;">
+            <strong style="color:#facc15;">⚡ Moderate Delay Risk ({single_res['late_probability']*100:.1f}%). Recommended Monitoring:</strong>
+            <ul style="margin: 8px 0 0 0; font-size: 0.9rem; color: #e2e8f0;">
+                <li><strong>Terminal Queue Tracking:</strong> Monitor destination port pilot board for anchorage waiting times.</li>
+                <li><strong>Carrier Verification:</strong> Confirm scheduled crane discharge window with {row['carrier']}.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class="operator-action-card" style="border-left: 4px solid #4ade80;">
+            <strong style="color:#4ade80;">✅ Low Delay Risk ({single_res['late_probability']*100:.1f}%). Standard Transit:</strong>
+            <ul style="margin: 8px 0 0 0; font-size: 0.9rem; color: #e2e8f0;">
+                <li>Shipment is progressing within acceptable tolerances. Maintain standard automated tracking updates.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 4. STAGE WATERFALL & TREE SHAP ATTRIBUTIONS
     col_left, col_right = st.columns([1.1, 1])
 
     with col_left:
-        st.markdown("#### 🌊 Stage-by-Stage Delay Propagation Waterfall")
+        st.markdown("#### 4. 🌊 Stage-by-Stage Delay Propagation Waterfall")
         waterfall_df = pd.DataFrame(single_res["waterfall"])
 
         wf_chart = alt.Chart(waterfall_df).mark_bar(cornerRadius=4).encode(
             x=alt.X("Stage:N", sort=None, title="Journey Stage"),
-            y=alt.Y("Delay Incurred (Hours):Q", title="Stage Delay (Hours)"),
+            y=alt.Y("Incremental Delay (Hours):Q", title="Incremental Stage Delay (Hours)"),
             color=alt.Color("Status:N", scale=alt.Scale(
                 domain=["Observed Upstream", "Estimated Downstream", "Observed / Actual"],
                 range=["#3b82f6", "#f97316", "#10b981"]
             )),
             tooltip=[
                 alt.Tooltip("Stage:N", title="Stage"),
-                alt.Tooltip("Delay Incurred (Hours):Q", title="Stage Delay (h)", format=".1f"),
-                alt.Tooltip("Cumulative Delay:Q", title="Cumulative Delay (h)", format=".1f"),
+                alt.Tooltip("Status:N", title="Checkpoint Visibility"),
+                alt.Tooltip("Incremental Delay (Hours):Q", title="Incremental Delay (h)", format=".1f"),
+                alt.Tooltip("Cumulative Delay at Milestone:Q", title="Cumulative Delay (h)", format=".1f"),
                 alt.Tooltip("Propagation Driver:N", title="Primary Driver"),
             ]
         ).properties(height=300)
 
         line_chart = alt.Chart(waterfall_df).mark_line(point=True, color="#fde047", strokeWidth=2).encode(
             x=alt.X("Stage:N", sort=None),
-            y=alt.Y("Cumulative Delay:Q"),
-            tooltip=[alt.Tooltip("Cumulative Delay:Q", title="Cumulative Delay (h)", format=".1f")]
+            y=alt.Y("Cumulative Delay at Milestone:Q"),
+            tooltip=[alt.Tooltip("Cumulative Delay at Milestone:Q", title="Cumulative Delay at Milestone (h)", format=".1f")]
         )
-        st.altair_chart(wf_chart + line_chart, use_container_width=True)
-        st.caption("Bar height shows delay added at that stage; Yellow line shows cumulative delay progression.")
+        st.altair_chart(wf_chart + line_chart, width="stretch")
+        st.caption("Bar height: Incremental delay added at that stage. Yellow line: Cumulative schedule deviation (inherited delay).")
 
     with col_right:
-        st.markdown("#### 🌲 Machine Learning Feature Attribution (Tree SHAP)")
+        st.markdown("#### 5. 🌲 Tree SHAP Feature Attribution (Hours Contributed)")
         attributions = single_res["tree_attributions"]["attributions"]
         attr_df = pd.DataFrame(attributions).head(7)
 
         attr_chart = alt.Chart(attr_df).mark_bar(cornerRadius=4).encode(
-            x=alt.X("impact_hours:Q", title="Impact on Delay Prediction (Hours)"),
-            y=alt.Y("label:N", sort=alt.EncodingSortField(field="impact_hours", op="sum", order="descending"), title="Feature"),
+            x=alt.X("impact_hours:Q", title="Impact on ETA Delay (Hours)"),
+            y=alt.Y("label:N", sort=alt.EncodingSortField(field="impact_hours", op="sum", order="descending"), title=""),
             color=alt.condition(
                 alt.datum.impact_hours > 0,
-                alt.value("#ef4444"),  # Increases delay
-                alt.value("#22c55e")   # Decreases delay
+                alt.value("#ef4444"),  # Pushes ETA later
+                alt.value("#22c55e")   # Buffers / reduces delay
             ),
             tooltip=[
-                alt.Tooltip("label:N", title="Feature"),
+                alt.Tooltip("label:N", title="Factor"),
                 alt.Tooltip("value:Q", title="Observed Value", format=".2f"),
-                alt.Tooltip("impact_hours:Q", title="Impact on ETA (h)", format="+.2f"),
+                alt.Tooltip("impact_hours:Q", title="Impact on Prediction (h)", format="+.2f"),
                 alt.Tooltip("direction:N", title="Effect")
             ]
         ).properties(height=300)
-        st.altair_chart(attr_chart, use_container_width=True)
-        st.caption("Red bars pushed expected arrival later; Green bars buffered / reduced delay relative to baseline.")
+        st.altair_chart(attr_chart, width="stretch")
+        st.caption("Red bars: Factors pushing arrival later. Green bars: Buffers/factors reducing delay relative to fleet average.")
 
     # Narrative Explanations
     st.markdown("#### 💡 AI Diagnostic Insights & Operational Explanations")
     for msg in single_res["narrative_explanations"]:
         st.markdown(f"- {msg}")
+
+    # Ground-truth evaluation expander (Strictly separated for historical auditing)
+    with st.expander("🔍 Historical Post-Delivery Ground Truth Audit (Visible only for completed journeys)"):
+        st.caption("This data represents ground-truth actuals recorded after delivery. It is strictly excluded at prediction time.")
+        c_gt1, c_gt2, c_gt3 = st.columns(3)
+        act_deliv_ts = pd.to_datetime(row["actual_delivery"]).strftime("%d %b %Y, %H:%M UTC")
+        act_total_del = float(row["actual_total_delay_hours"])
+        pred_del = float(single_res["predicted_delay_hours"])
+        err = round(abs(pred_del - act_total_del), 2)
+
+        with c_gt1:
+            st.metric("Ground-Truth Actual Delivery", act_deliv_ts)
+        with c_gt2:
+            st.metric("Ground-Truth Actual Delay", f"+{act_total_del:.1f} hrs")
+        with c_gt3:
+            st.metric("Model Absolute Error", f"{err:.1f} hrs", delta=f"{'Overestimated' if pred_del > act_total_del else 'Underestimated'}")
 
 # =========================================================================
 # TAB 3: WHAT-IF SCENARIO SIMULATOR & CUSTOM JOURNEY BUILDER
@@ -502,7 +619,6 @@ with tab3:
             ["Preset: High Congestion Transpacific", "Preset: Severe Weather Atlantic", "Preset: On-Time Baseline", "Custom Manual Entry"]
         )
 
-        # Default presets
         if base_choice == "Preset: High Congestion Transpacific":
             def_dep_delay = 4.0
             def_sail_delay = 8.0
@@ -577,7 +693,7 @@ with tab3:
         with res_c1:
             st.metric("Predicted Total Delay", f"{sim_res['predicted_delay_hours']:.1f} hrs",
                       delta=f"{sim_res['predicted_remaining_delay_hours']:.1f}h remaining at port")
-            st.metric("90% Confidence Window",
+            st.metric("Uncertainty Band",
                       f"[{sim_res['predicted_delay_lower_hours']:.1f}h — {sim_res['predicted_delay_upper_hours']:.1f}h]")
         with res_c2:
             sim_late_p = sim_res["late_probability"]
@@ -587,8 +703,8 @@ with tab3:
         st.markdown(f"**Estimated Arrival:** `{pd.to_datetime(sim_res['predicted_eta']).strftime('%d %b %Y, %H:%M UTC')}`")
 
         # Congestion Sensitivity Curve
-        st.markdown("##### 📈 Congestion Sensitivity Analysis")
-        st.caption("How predicted delay shifts across terminal congestion levels for this exact voyage:")
+        st.markdown("##### 📈 Terminal Congestion Sensitivity Curve")
+        st.caption("How predicted delay shifts as terminal congestion ranges from 0.0 (empty) to 1.0 (gridlock):")
 
         sensitivity_points = []
         for c_val in np.linspace(0.0, 1.0, 11):
@@ -610,7 +726,7 @@ with tab3:
                 alt.Tooltip("Predicted Delay (Hours):Q", title="Expected Delay (h)", format=".1f")
             ]
         ).properties(height=230)
-        st.altair_chart(sens_chart, use_container_width=True)
+        st.altair_chart(sens_chart, width="stretch")
 
 # =========================================================================
 # TAB 4: MODEL PERFORMANCE & METHODOLOGY
@@ -619,19 +735,22 @@ with tab4:
     st.subheader("Model Performance, Benchmarking & Technical Methodology")
 
     metrics = bundle["metrics"]
+    reg_m = metrics["regression"]
+    cls_m = metrics["classification"]
+    pi_m = metrics["prediction_intervals"]
 
     m1, m2, m3, m4 = st.columns(4)
     with m1:
-        st.metric("Model MAE", f"{metrics['mae_hours']} h",
-                  delta=f"-{metrics.get('mae_improvement_percent', 14.3)}% vs Baseline", delta_color="inverse")
+        st.metric("Model MAE", f"{reg_m['model_mae_hours']} h",
+                  delta=f"-{reg_m['mae_improvement_percent_vs_heuristic']}% vs Baseline", delta_color="inverse")
     with m2:
-        st.metric("Operational Baseline MAE", f"{metrics['baseline_mae_hours']} h",
+        st.metric("Operational Baseline MAE", f"{reg_m['baseline_heuristic_mae_hours']} h",
                   help="Observed upstream delay + median training downstream residual.")
     with m3:
-        st.metric("Model RMSE", f"{metrics['rmse_hours']} h",
-                  delta=f"Baseline: {metrics['baseline_rmse_hours']} h", delta_color="inverse")
+        st.metric("Model RMSE", f"{reg_m['model_rmse_hours']} h",
+                  delta=f"Baseline: {reg_m['baseline_heuristic_rmse_hours']} h", delta_color="inverse")
     with m4:
-        st.metric("Delay Risk ROC-AUC", f"{metrics['classification']['roc_auc']}",
+        st.metric("Delay Risk ROC-AUC", f"{cls_m['roc_auc']}",
                   help="Evaluates accuracy in distinguishing high-delay vs on-time shipments.")
 
     col_eval_left, col_eval_right = st.columns(2)
@@ -657,7 +776,7 @@ with tab4:
                 color='#ef4444', strokeDash=[4, 4]
             ).encode(x='x:Q', y='y:Q')
 
-            st.altair_chart(scatter + line_ref, use_container_width=True)
+            st.altair_chart(scatter + line_ref, width="stretch")
             st.caption("Points closer to the red dashed line reflect accurate predictions.")
         else:
             st.info("Retrain the model to populate the held-out parity sample.")
@@ -674,8 +793,29 @@ with tab4:
             y=alt.Y("Feature Label:N", sort=None, title=""),
             tooltip=["Feature Label:N", alt.Tooltip("Importance:Q", format=".3f")]
         ).properties(height=280)
-        st.altair_chart(imp_chart, use_container_width=True)
+        st.altair_chart(imp_chart, width="stretch")
         st.caption("Derived from MDI across all decision trees in the ensemble.")
+
+    # Classification Confusion Matrix & Interval Coverage
+    st.markdown("#### 📋 Classification Performance & Uncertainty Calibration")
+    c_m1, c_m2, c_m3 = st.columns(3)
+    with c_m1:
+        st.markdown(f"**Classification Accuracy:** `{cls_m['accuracy']*100:.1f}%`")
+        st.markdown(f"**Precision:** `{cls_m['precision']*100:.1f}%` | **Recall:** `{cls_m['recall']*100:.1f}%`")
+        st.markdown(f"**F1-Score:** `{cls_m['f1_score']}`")
+    with c_m2:
+        cm = cls_m["confusion_matrix"]
+        st.markdown("**Held-Out Confusion Matrix:**")
+        st.markdown(f"- True Negatives (On-Time): `{cm[0][0]}`")
+        st.markdown(f"- False Positives (False Alarms): `{cm[0][1]}`")
+        st.markdown(f"- False Negatives (Missed Late): `{cm[1][0]}`")
+        st.markdown(f"- True Positives (Caught Late): `{cm[1][1]}`")
+    with c_m3:
+        st.markdown(f"**Prediction Interval Calibration:**")
+        st.markdown(f"- Method: `{pi_m.get('method', 'out_of_bag_residual_quantiles')}`")
+        st.markdown(f"- Nominal Target: `{pi_m['nominal_confidence']*100:.0f}%`")
+        st.markdown(f"- **Empirical Test Coverage:** `{pi_m['empirical_test_coverage']*100:.1f}%`")
+        st.markdown(f"- Residual Spread: `[{pi_m['q10_residual_hours']:+.1f}h to {pi_m['q90_residual_hours']:+.1f}h]`")
 
     st.markdown("---")
     st.markdown("#### 📘 Simulation Assumptions, Limitations & Future Roadmap")
