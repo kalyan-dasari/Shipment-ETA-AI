@@ -631,23 +631,6 @@ with tab2:
         st.altair_chart(attr_chart, width="stretch")
         st.caption("Red bars: Factors pushing arrival later. Green bars: Factors reducing delay. Decomposes decision tree splits relative to dataset baseline (explains model prediction, not interventional causal proof).")
 
-        attr_chart = alt.Chart(attr_df).mark_bar(cornerRadius=4).encode(
-            x=alt.X("impact_hours:Q", title="Impact on ETA Delay (Hours)"),
-            y=alt.Y("label:N", sort=alt.EncodingSortField(field="impact_hours", op="sum", order="descending"), title=""),
-            color=alt.condition(
-                alt.datum.impact_hours > 0,
-                alt.value("#ef4444"),  # Pushes ETA later
-                alt.value("#22c55e")   # Buffers / reduces delay
-            ),
-            tooltip=[
-                alt.Tooltip("label:N", title="Factor"),
-                alt.Tooltip("value:Q", title="Observed Value", format=".2f"),
-                alt.Tooltip("impact_hours:Q", title="Impact on Prediction (h)", format="+.2f"),
-                alt.Tooltip("direction:N", title="Effect")
-            ]
-        ).properties(height=300)
-        st.altair_chart(attr_chart, width="stretch")
-        st.caption("Red bars: Factors pushing arrival later. Green bars: Buffers/factors reducing delay relative to fleet average.")
 
     # Narrative Explanations
     st.markdown("#### 💡 AI Diagnostic Insights & Operational Explanations")
