@@ -328,7 +328,7 @@ Open `http://localhost:8501` to access four dedicated operational tabs:
 - **Confusion Matrix:** `[[1, 9], [3, 62]]` (TN: 1, FP: 9, FN: 3, TP: 62).
 - **Decision Trade-Off:** The classifier operating point prioritizes high sensitivity (95.4% recall) because missing a severely delayed shipment (False Negative) causes missed consignee delivery windows and demurrage, whereas checking an on-time shipment (False Positive) incurs negligible operational cost.
 
-### Uncertainty Interval Calibration
+### Uncertainty Intervals & Coverage
 - **Residual Quantiles:** Derived from Out-of-Bag training residuals ($q_{10} = -14.94\text{h}, q_{90} = +16.76\text{h}$).
 - **Nominal Target:** 80.0% | **Measured Held-Out Test Coverage:** **74.7%**.
 - **Reporting Stance:** Labeled **exploratory uncertainty intervals** due to heteroscedastic terminal queueing variance across extreme congestion levels.
@@ -352,7 +352,7 @@ Verified directly from [`data/shipments.csv`](data/shipments.csv) and [`predict_
 | **Predicted Final ETA** | $\mathbf{2025\text{-}04\text{-}03\text{ }17:45:00\text{ UTC}}$ | $\text{Scheduled ETA} + 41.59\text{h}$ [Exact Match] |
 | **Uncertainty Interval** | $[+26.65\text{h}, +58.35\text{h}]$ | $[\text{03 Apr 02:48 UTC}, \text{04 Apr 10:30 UTC}]$ |
 | **Late Risk Assessment** | Probability: **95.9%** $\to$ **CRITICAL RISK** | Exceeds 24h threshold with high confidence |
-| **Tree SHAP Attributions** | Upstream Delay: $+5.19\text{h}$, Sailing Delay: $+3.39\text{h}$ | Pushed ETA later; favorable congestion ($-5.96\text{h}$) buffered delay |
+| **Tree Feature Attributions** | Upstream Delay: $+5.19\text{h}$, Sailing Delay: $+3.39\text{h}$ | Pushed ETA later; favorable congestion ($-5.96\text{h}$) buffered delay |
 | **Post-Delivery Actuals** | Port: $+11.47\text{h}$, Customs: $+5.60\text{h}$, Final: $+0.95\text{h}$ | **Actual Total Delay:** $\mathbf{+39.15\text{ hours}}$ |
 | **Actual Delivery Timestamp**| $\mathbf{2025\text{-}04\text{-}03\text{ }15:18:36\text{ UTC}}$ | Recorded post-delivery for evaluation only |
 | **Prediction Absolute Error**| $\mathbf{2.44\text{ hours}}$ | $|41.59 - 39.15| = 2.44\text{ hours}$ (Accurate within 2.5 hours) |
@@ -375,7 +375,7 @@ python -m pytest -v
 - `test_dataset_validation_rejects_double_counting`: Verifies validator catches stage sum discrepancies.
 - `test_explanation_mentions_uncertainty`: Confirms statistical disclaimer presence in narrative explanations.
 - `test_prediction_dataframe_confidence_intervals`: Validates batch prediction intervals, probability bounds, and risk tiers.
-- `test_single_prediction_and_attributions`: Confirms Tree SHAP attributions sum to decision-tree prediction delta.
+- `test_single_prediction_and_attributions`: Confirms tree feature attributions sum to decision-tree prediction delta.
 - `test_stage_waterfall_structure`: Validates 5-stage waterfall disaggregation.
 - `test_baseline_and_model_evaluation_metrics`: Verifies AI Model MAE < Heuristic MAE, confusion matrix sum ($N=75$), and interval coverage.
 - `test_predicted_eta_exact_arithmetic`: Confirms $\text{predicted\_eta} == \text{scheduled\_arrival} + \text{predicted\_delay\_hours}$.
