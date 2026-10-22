@@ -314,7 +314,7 @@ def generate_pdf():
         
         <h3>Worked Numerical Example: Shipment <code>SHP-0001</code></h3>
         <div class="callout">
-            <strong>Voyage Profile:</strong> Vessel <em>Nordic Horizon</em> (CMA CGM Group, Route: Shanghai to Hamburg via Port Alpha).<br>
+            <strong>Voyage Profile:</strong> Vessel <em>Nordic Horizon</em> (CMA CGM Group, Route: Shanghai to Hamburg via Port Delta (Dubai)).<br>
             <strong>Scheduled Departure:</strong> 2025-03-15 12:00:00 UTC &nbsp;|&nbsp; <strong>Scheduled Arrival:</strong> 2025-04-02 00:09:36 UTC<br>
             <strong>Planned Stage Durations:</strong> Sailing: 352.98h, Port Dwell: 29.31h, Customs: 19.72h, Final Inland: 18.15h (Total: 420.16h).
         </div>
