@@ -260,7 +260,7 @@ Execute the full pipeline in the documented order:
 python -m src.data_generator
 # Output: Generated 300 validated synthetic shipments at data/shipments.csv
 
-# Step 2: Train models, benchmark baselines, and calibrate uncertainty
+# Step 2: Train models, benchmark baselines, and compute uncertainty intervals
 python -m src.train
 # Output: Saved model artifact to artifacts/eta_model.joblib and metrics to artifacts/eta_model.metrics.json
 
@@ -284,26 +284,27 @@ streamlit run app.py
 
 Open `http://localhost:8501` to access four dedicated operational tabs:
 
-1. **Tab 1: 🌐 Fleet Intelligence & Live Monitoring**
-   - KPI cards: Active Shipments, On-Time Arrival %, Mean Expected Delay, Critical Risk Count.
-   - Interactive filters: Origin Port, Destination Port, Late Risk Tier, and Free-text Search.
-   - Fleet delay distribution histogram and sortable shipment table with risk badges.
-2. **Tab 2: 🔍 Shipment Root-Cause Deep-Dive & Operator Playbook**
+1. **Tab 1: 🌐 Fleet Overview**
+   - Compact KPI cards: Shipments in Dataset (300), Mean Predicted Delay (46.4h), Predicted On-Time Rate (5.3%), Critical-Risk Predictions (253).
+   - Interactive filters: Origin Port, Destination Port, Late Risk Category, and Free-text Search.
+   - Fleet delay distribution histogram, trade lane average delay comparison, and sortable shipment table with risk badges.
+2. **Tab 2: 🔍 Shipment Analysis**
    - Visual 5-stage progression stepper (*Origin $\to$ Ocean $\to$ Port Checkpoint $\to$ Customs $\to$ Final Delivery*).
-   - Strict visual demarcation: **Observed Facts** vs **AI Predictions** vs **Unknown Future Stages**.
-   - **Operator Decision Playbook:** Actionable recommendations tailored to the shipment's risk tier.
+   - Strict visual demarcation: **Observed Checkpoint Facts** vs **AI Predictions** vs **Unknown Future Stages**.
+   - **Operator Decision Playbook:** Actionable interventions tailored to the shipment's operational risk tier.
    - **Interactive Delay Propagation Waterfall:** Disaggregates stage delays and tracks cumulative deviation.
-   - **Tree SHAP Attributions:** Quantifies exact hours contributed or buffered by each feature.
+   - **Tree Path Feature Attributions:** Quantifies hours contributed or buffered by each feature relative to fleet baseline.
    - Collapsible **Post-Delivery Historical Audit** for retrospective validation.
-3. **Tab 3: 🧪 What-If Scenario Simulator & Journey Builder**
+3. **Tab 3: 🧪 Scenario Testing**
    - Sliders for Departure Delay, Sailing Delay, Port Congestion, and Weather Severity.
    - Dynamic Delay Threshold slider (12h to 72h).
-   - Real-time recalculation of Predicted ETA, Delay, and Late Probability.
-   - **Terminal Congestion Sensitivity Curve:** Visualizes delay trajectory as congestion scales from 0.0 to 1.0.
-4. **Tab 4: 📊 Model Performance & Benchmarks**
-   - Model vs Baseline performance scorecard.
+   - Real-time recalculation of Predicted ETA, Delay, and Late Probability using checkpoint-available features only.
+   - **Terminal Congestion Sensitivity Curve:** Visualizes hypothetical model delay trajectory as congestion scales from 0.0 to 1.0.
+4. **Tab 4: 📊 Model Evaluation**
+   - Model vs Baseline performance scorecard (MAE, RMSE, $R^2$, and error reduction).
    - Actual vs Predicted delay parity scatter plot with identity reference line.
-   - Confusion matrix display, Out-of-Bag calibration spread, and global feature importance rankings.
+   - Confusion matrix display, Out-of-Bag uncertainty spread, and global feature importance rankings.
+   - Clear synthetic data limitation notice.
 
 ---
 
