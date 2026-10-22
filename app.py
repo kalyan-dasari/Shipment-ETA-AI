@@ -3,9 +3,16 @@ from pathlib import Path
 from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
+import sys
 import streamlit as st
-import altair as alt
 
+# Automatically launch via Streamlit runner if invoked directly as `python app.py`
+if not st.runtime.exists():
+    import subprocess
+    cmd = [sys.executable, "-m", "streamlit", "run", __file__] + sys.argv[1:]
+    sys.exit(subprocess.call(cmd))
+
+import altair as alt
 from src.data_generator import generate_shipments, save_dataset
 from src.train import train
 from src.predict import load_bundle, predict_dataframe, predict_single, get_risk_category
