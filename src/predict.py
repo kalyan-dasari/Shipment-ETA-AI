@@ -64,10 +64,10 @@ def predict_dataframe(df: pd.DataFrame, bundle: Optional[Dict[str, Any]] = None)
     out["predicted_delay_lower_hours"] = np.round(lower_bound, 2)
     out["predicted_delay_upper_hours"] = np.round(upper_bound, 2)
     
-    # Predicted ETA timestamps
-    out["predicted_eta"] = sched_arrival + pd.to_timedelta(predicted_delay, unit="h")
-    out["predicted_eta_lower"] = sched_arrival + pd.to_timedelta(lower_bound, unit="h")
-    out["predicted_eta_upper"] = sched_arrival + pd.to_timedelta(upper_bound, unit="h")
+    # Predicted ETA timestamps (consistent with predicted_delay_hours)
+    out["predicted_eta"] = (sched_arrival + pd.to_timedelta(out["predicted_delay_hours"], unit="h")).dt.floor("s")
+    out["predicted_eta_lower"] = (sched_arrival + pd.to_timedelta(out["predicted_delay_lower_hours"], unit="h")).dt.floor("s")
+    out["predicted_eta_upper"] = (sched_arrival + pd.to_timedelta(out["predicted_delay_upper_hours"], unit="h")).dt.floor("s")
 
     out["late_probability"] = np.round(late_probs, 3)
     out["late_risk"] = [get_risk_category(p) for p in late_probs]

@@ -148,7 +148,7 @@ All results below are directly measured from held-out test execution (`artifacts
 To provide auditable decision support, the system decomposes predictions using **Tree SHAP path attribution** ($\widehat{y} = \bar{y} + \sum \phi_j$) and stage-by-stage waterfalls.
 
 ### Worked Numerical Example: Shipment `SHP-0001`
-- **Voyage Profile:** Vessel *Nordic Horizon* (Carrier: *CMA CGM Group*, Route: *Shanghai to Hamburg* via *Port Alpha*).
+- **Voyage Profile:** Vessel *Nordic Horizon* (Carrier: *CMA CGM Group*, Route: *Shanghai to Hamburg* via *Port Delta (Dubai)*).
 - **Scheduled Departure:** `2025-03-15 12:00:00 UTC` | **Scheduled Arrival:** `2025-04-02 00:09:36 UTC`
 - **Planned Stage Durations:** Sailing: 352.98h | Port Dwell: 29.31h | Customs: 19.72h | Inland Final: 18.15h (Total: 420.16h).
 
