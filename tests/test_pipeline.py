@@ -134,3 +134,30 @@ def test_baseline_and_model_evaluation_metrics():
     assert cm.sum() == metrics["test_rows"]
     # Empirical test coverage must be positive
     assert metrics["prediction_intervals"]["empirical_test_coverage"] > 0.50
+
+def test_predicted_eta_exact_arithmetic():
+    """Verify that predicted_eta mathematically equals scheduled_arrival + predicted_delay_hours."""
+    bundle = load_bundle("artifacts/eta_model.joblib")
+    df = generate_shipments(20, seed=17)
+    preds = predict_dataframe(df, bundle)
+    sched = pd.to_datetime(preds["scheduled_arrival"], utc=True)
+    expected_eta = (sched + pd.to_timedelta(preds["predicted_delay_hours"], unit="h")).dt.floor("s")
+    assert (preds["predicted_eta"] == expected_eta).all()
+
+def test_shp0001_worked_example_matches_report():
+    """Verify worked shipment example SHP-0001 reproduced exactly from dataset and model."""
+    bundle = load_bundle("artifacts/eta_model.joblib")
+    df = pd.read_csv("data/shipments.csv")
+    shp1 = df[df["shipment_id"] == "SHP-0001"].iloc[0]
+    res = predict_single(shp1, bundle)
+
+    assert res["predicted_delay_hours"] == 41.59
+    assert res["predicted_remaining_delay_hours"] == 20.46
+    assert res["late_risk"] == "Critical"
+    assert res["late_probability"] == 0.959
+
+    sched = pd.to_datetime(shp1["scheduled_arrival"], utc=True)
+    assert pd.to_datetime(res["predicted_eta"], utc=True) == pd.Timestamp("2025-04-03 17:45:00", tz="UTC")
+    assert pd.to_datetime(shp1["actual_delivery"], utc=True) == pd.Timestamp("2025-04-03 15:18:36", tz="UTC")
+    assert round(abs(res["predicted_delay_hours"] - shp1["actual_total_delay_hours"]), 2) == 2.44
+
