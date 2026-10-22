@@ -44,17 +44,19 @@ def train(data_path="data/shipments.csv", model_path="artifacts/eta_model.joblib
     )
 
     # -------------------------------------------------------------
-    # 1. Random Forest Regressor Pipeline
+    # 1. Random Forest Regressor Pipeline (with Out-Of-Bag Scoring)
     # -------------------------------------------------------------
+    rf_reg = RandomForestRegressor(
+        n_estimators=300,
+        min_samples_leaf=2,
+        max_features="sqrt",
+        oob_score=True,
+        random_state=RANDOM_SEED,
+        n_jobs=-1
+    )
     regressor = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
-        ("regressor", RandomForestRegressor(
-            n_estimators=300,
-            min_samples_leaf=2,
-            max_features="sqrt",
-            random_state=RANDOM_SEED,
-            n_jobs=-1
-        )),
+        ("regressor", rf_reg),
     ])
     regressor.fit(X_train, y_train)
     pred_test = np.maximum(0.0, regressor.predict(X_test))
@@ -108,28 +110,28 @@ def train(data_path="data/shipments.csv", model_path="artifacts/eta_model.joblib
     cm = confusion_matrix(y_class_test, class_pred_test).tolist()
 
     # -------------------------------------------------------------
-    # 4. Residual Quantiles & Empirical Test Coverage Validation
+    # 4. Out-of-Bag (OOB) Residual Quantiles & Empirical Test Coverage Validation
+    # Out-of-bag residuals avoid in-sample overfitting and yield realistic uncertainty spreads.
     # -------------------------------------------------------------
-    pred_train = regressor.predict(X_train)
-    residuals_train = y_train.to_numpy() - pred_train
-    q10 = float(np.percentile(residuals_train, 10))
-    q25 = float(np.percentile(residuals_train, 25))
-    q75 = float(np.percentile(residuals_train, 75))
-    q90 = float(np.percentile(residuals_train, 90))
-    res_std = float(np.std(residuals_train))
+    oob_preds = rf_reg.oob_prediction_
+    oob_residuals = y_train.to_numpy() - oob_preds
+    q10_oob = float(np.percentile(oob_residuals, 10))
+    q25_oob = float(np.percentile(oob_residuals, 25))
+    q75_oob = float(np.percentile(oob_residuals, 75))
+    q90_oob = float(np.percentile(oob_residuals, 90))
+    res_std = float(np.std(oob_residuals))
 
-    # Empirical test set coverage: percentage of test cases falling within nominal 80% interval [pred + q10, pred + q90]
-    test_lower = np.maximum(0.0, pred_test + q10)
-    test_upper = pred_test + q90
+    # Empirical test set coverage: percentage of held-out test cases inside [pred + q10_oob, pred + q90_oob]
+    test_lower = np.maximum(0.0, pred_test + q10_oob)
+    test_upper = pred_test + q90_oob
     empirical_coverage_80 = float(np.mean((y_test.to_numpy() >= test_lower) & (y_test.to_numpy() <= test_upper)))
 
     # -------------------------------------------------------------
     # 5. Global Feature Importances
     # -------------------------------------------------------------
-    rf_inner = regressor.named_steps["regressor"]
     importances = {
         col: round(float(imp), 4)
-        for col, imp in zip(FEATURES, rf_inner.feature_importances_)
+        for col, imp in zip(FEATURES, rf_reg.feature_importances_)
     }
     sorted_importances = dict(sorted(importances.items(), key=lambda x: x[1], reverse=True))
 
@@ -141,7 +143,7 @@ def train(data_path="data/shipments.csv", model_path="artifacts/eta_model.joblib
         "split_strategy": "stratified_75_25_by_late_delivery",
         "late_threshold_hours": late_threshold_hours,
         "model_config": {
-            "regressor": "RandomForestRegressor(n_estimators=300, min_samples_leaf=2, max_features='sqrt')",
+            "regressor": "RandomForestRegressor(n_estimators=300, min_samples_leaf=2, max_features='sqrt', oob_score=True)",
             "classifier": "RandomForestClassifier(n_estimators=200, max_depth=6, min_samples_leaf=2)"
         },
         "regression": {
@@ -166,13 +168,14 @@ def train(data_path="data/shipments.csv", model_path="artifacts/eta_model.joblib
             "confusion_matrix": cm,
         },
         "prediction_intervals": {
+            "method": "out_of_bag_residual_quantiles",
             "nominal_confidence": 0.80,
             "empirical_test_coverage": round(empirical_coverage_80, 3),
-            "q10_residual_hours": round(q10, 2),
-            "q90_residual_hours": round(q90, 2),
+            "q10_residual_hours": round(q10_oob, 2),
+            "q90_residual_hours": round(q90_oob, 2),
             "residual_std_hours": round(res_std, 2),
         },
-        # Backwards compatibility flat aliases
+        # Compatibility aliases
         "mae_hours": round(mae, 3),
         "rmse_hours": round(rmse, 3),
         "r2_score": round(r2, 3),
@@ -193,10 +196,10 @@ def train(data_path="data/shipments.csv", model_path="artifacts/eta_model.joblib
         "baseline_median_residual": median_downstream_residual,
         "train_mean_delay": float(np.mean(y_train)),
         "residual_stats": {
-            "q10": round(q10, 2),
-            "q25": round(q25, 2),
-            "q75": round(q75, 2),
-            "q90": round(q90, 2),
+            "q10": round(q10_oob, 2),
+            "q25": round(q25_oob, 2),
+            "q75": round(q75_oob, 2),
+            "q90": round(q90_oob, 2),
             "std": round(res_std, 2),
             "empirical_test_coverage": round(empirical_coverage_80, 3),
         },
