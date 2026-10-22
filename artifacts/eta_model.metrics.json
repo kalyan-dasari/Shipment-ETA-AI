@@ -6,7 +6,7 @@
   "split_strategy": "stratified_75_25_by_late_delivery",
   "late_threshold_hours": 24.0,
   "model_config": {
-    "regressor": "RandomForestRegressor(n_estimators=300, min_samples_leaf=2, max_features='sqrt')",
+    "regressor": "RandomForestRegressor(n_estimators=300, min_samples_leaf=2, max_features='sqrt', oob_score=True)",
     "classifier": "RandomForestClassifier(n_estimators=200, max_depth=6, min_samples_leaf=2)"
   },
   "regression": {
@@ -40,11 +40,12 @@
     ]
   },
   "prediction_intervals": {
+    "method": "out_of_bag_residual_quantiles",
     "nominal_confidence": 0.8,
-    "empirical_test_coverage": 0.467,
-    "q10_residual_hours": -7.23,
-    "q90_residual_hours": 7.93,
-    "residual_std_hours": 5.95
+    "empirical_test_coverage": 0.76,
+    "q10_residual_hours": -14.78,
+    "q90_residual_hours": 16.71,
+    "residual_std_hours": 12.2
   },
   "mae_hours": 9.885,
   "rmse_hours": 12.667,
@@ -68,6 +69,6 @@
     "planned_customs_hours": 0.0261,
     "planned_sailing_hours": 0.0255
   },
-  "trained_at_utc": "2026-10-22T05:48:15.548034+00:00",
+  "trained_at_utc": "2026-10-22T05:52:11.130756+00:00",
   "note": "Synthetic demonstration dataset; metrics reflect consistency with simulation mechanics."
 }
