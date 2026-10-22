@@ -6,287 +6,182 @@
 [![Pytest Passing](https://img.shields.io/badge/tests-13%20passed-brightgreen.svg)](tests/test_pipeline.py)
 [![Deliverable PDF](https://img.shields.io/badge/report-3--Page%20PDF-purple.svg)](reports/TECHNICAL_REPORT.pdf)
 
-An advanced machine learning system and interactive decision-support dashboard for **Predicting Shipment ETA and Delay Propagation** across multi-stage maritime supply chains.
+An advanced machine learning system and interactive decision-support dashboard for **Predicting Shipment ETA and Delay Propagation** across multi-stage maritime container supply chains.
 
 ---
 
-## 🌟 Executive Summary & Problem Context
-
-In international container shipping, schedule disruptions cascade through downstream supply chain stages. A delay during origin terminal handling or deep-sea ocean transit does not remain isolated; it causes missed berthing windows, terminal anchorage queues, customs clearance bottlenecks, and missed inland rail/truck connections.
-
-Traditional freight visibility platforms rely on static schedule tables or naive linear projections that assume zero future delay after an initial disruption. 
-
-This system models the high-value **Port Arrival Checkpoint** (outer pilot station / anchorage): estimating final delivery arrival timestamp and delay magnitude while the voyage is in-progress, enabling logistics operators to proactively:
-1. Issue calibrated delay advisories to warehouse receiving and retail consignees.
-2. Request off-dock container staging or priority crane slots to mitigate port yard dwell.
-3. Pre-lodge electronic customs manifests (EDI) to eliminate customs dwell.
-4. Reschedule onward drayage and rail connections to avoid punitive demurrage and detention charges.
-
-> **Notice on Synthetic Data:** This prototype uses mathematically modeled synthetic journeys. Evaluation metrics establish consistency with the underlying simulation mechanics and do not represent empirical real-world carrier accuracy.
-
----
-
-## 🚀 Quick Start Guide
-
-### 1. Requirements & Installation
-Requires Python 3.10+ (tested and verified on Python 3.14).
-
-```bash
-# Clone or navigate to the repository
-cd Shipment-ETA-AI
-
-# Create and activate virtual environment (recommended)
-python -m venv .venv
-# On Windows PowerShell:
-.venv\Scripts\Activate.ps1
-# On macOS/Linux:
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-### 2. Generate Synthetic Dataset
-Generates 300 validated synthetic shipment journeys across 5 discrete stages with linked delay propagation equations:
-```bash
-python -m src.data_generator
-```
-Output: `Generated 300 validated synthetic shipments at data/shipments.csv`
-
-### 3. Train Models & Calibrate Baselines
-Trains the Random Forest Regressor (300 trees, Out-Of-Bag scoring), Delay-Risk Classifier (200 trees), Out-Of-Bag residual quantiles, and benchmark baselines on a 25% stratified held-out split (`seed=42`):
-```bash
-python -m src.train
-```
-Artifacts saved: [`artifacts/eta_model.joblib`](artifacts/eta_model.joblib) and [`artifacts/eta_model.metrics.json`](artifacts/eta_model.metrics.json).
-
-### 4. Run Automated Unit Tests
-Executes the comprehensive 13-test test suite verifying data integrity, feature leakage prevention, exact ETA arithmetic, and model outputs:
-```bash
-python -m pytest -v
-```
-Result: `13 passed in ~4.2s`
-
-### 5. Launch Interactive Streamlit Dashboard
-```bash
-streamlit run app.py
-# Alternatively: python app.py (auto-delegates to Streamlit runner)
-```
-Open your browser at `http://localhost:8501`.
-
-### 6. Compile 3-Page Executive PDF Technical Report
-```bash
-python -m src.generate_pdf_report
-```
-Generates the publication-quality printable report at [`reports/TECHNICAL_REPORT.pdf`](reports/TECHNICAL_REPORT.pdf).
+## 📋 Table of Contents
+1. [Project Overview & Problem Statement](#1-project-overview--problem-statement)
+2. [Intended Users & Practical Decision Support](#2-intended-users--practical-decision-support)
+3. [Key System Features](#3-key-system-features)
+4. [Architecture & End-to-End Data Flow](#4-architecture--end-to-end-data-flow)
+5. [Five Journey Stages & Delay Propagation Cascade](#5-five-journey-stages--delay-propagation-cascade)
+6. [Prediction Checkpoint & Target Leakage Prevention](#6-prediction-checkpoint--target-leakage-prevention)
+7. [Dataset Description & Synthetic Data Disclaimer](#7-dataset-description--synthetic-data-disclaimer)
+8. [Repository Structure](#8-repository-structure)
+9. [Prerequisites & Supported Environment](#9-prerequisites--supported-environment)
+10. [Local Setup & Installation](#10-local-setup--installation)
+11. [Execution Commands (Step-by-Step Pipeline)](#11-execution-commands-step-by-step-pipeline)
+12. [Interactive Streamlit Dashboard Usage](#12-interactive-streamlit-dashboard-usage)
+13. [How to Interpret Model Predictions & Metrics](#13-how-to-interpret-model-predictions--metrics)
+14. [Audited Worked Numerical Shipment Example (`SHP-0001`)](#14-audited-worked-numerical-shipment-example-shp-0001)
+15. [Automated Tests & Reproducibility](#15-automated-tests--reproducibility)
+16. [Comprehensive Troubleshooting Guide](#16-comprehensive-troubleshooting-guide)
+17. [Realistic Staged Future Development Roadmap](#17-realistic-staged-future-development-roadmap)
+18. [Optional 5-Minute Demonstration Walkthrough Plan](#18-optional-5-minute-demonstration-walkthrough-plan)
+19. [Final Submission Deliverables](#19-final-submission-deliverables)
 
 ---
 
-## 📊 Held-Out Evaluation Results & Benchmarks
+## 1. Project Overview & Problem Statement
 
-The system was evaluated on a 25% stratified held-out test split ($N_{\text{test}} = 75$ shipments, `seed=42`) against two operational baselines:
+In global ocean container freight, static scheduling is notoriously unreliable. Unforeseen disruptions during origin vessel loading or deep-sea ocean transit trigger compounding delays: missed berthing windows, extended outer anchorage dwell, customs clearance bottlenecks, and missed inland rail or truck drayage appointments.
 
-### 1. Delay Regression Benchmark Table
+Traditional freight visibility platforms rely on static schedule tables or naive linear projections that assume zero future delay once an initial disruption occurs. Predicting ETA at booking is too early (operational signals are unknown), while predicting after customs clearance is too late (no time remains for intervention).
 
-| Model / Approach | Held-Out Test MAE | Held-Out Test RMSE | Test $R^2$ Score | Error Reduction vs Benchmark |
-| :--- | :---: | :---: | :---: | :---: |
-| **Naive Baseline (Zero Downstream Delay)** | 29.168 hours | 32.163 hours | -2.708 | **+66.01% error vs AI model** |
-| **Operational Heuristic Baseline** | 11.531 hours | 14.175 hours | 0.280 | Benchmark Baseline |
-| **Random Forest AI Regressor** | **9.915 hours** | **12.693 hours** | **0.422** | **+14.01% improvement vs heuristic** |
-
-- **Operational Heuristic Definition:** $\widehat{\text{Delay}} = \text{Observed Delay at Port} + \text{Median}(\text{Training Downstream Residuals})$.
-- **Naive Baseline Definition:** Assumes zero downstream delay ($\widehat{\text{Delay}} = \text{Observed Delay at Port}$).
-- **Key Finding:** The Naive baseline fails severely (MAE 29.17h) because downstream port dwell, customs inspection, and inland linehaul introduce substantial variance (18+ hours on average). The Random Forest model outperforms the operational heuristic by 14.01%, explaining 42.2% of downstream delay variance.
-
-### 2. Delay-Risk Classification Performance ($> 24.0$h Threshold)
-
-| Metric | Measured Score | Operational Significance in Supply Chain |
-| :--- | :---: | :--- |
-| **Accuracy** | **84.0%** ($63 / 75$) | Correctly classifies delivery status on 84% of test voyages |
-| **Precision** | **87.3%** ($62 / 71$) | 87.3% of late-flagged shipments are genuinely late (low false alarm rate) |
-| **Recall (Sensitivity)** | **95.4%** ($62 / 65$) | Captures 95.4% of all shipments exceeding 24h delay (vital for SLA protection) |
-| **F1-Score** | **0.912** | High harmonic balance between precision and recall |
-| **ROC-AUC** | **0.780** | Robust discrimination across operational decision thresholds |
-| **Confusion Matrix** | `[[1, 9], [3, 62]]` | **TN:** 1 on-time, **FP:** 9 false alarms, **FN:** 3 missed late, **TP:** 62 caught late |
-
-> **Operational Trade-Off Rationale:** In international logistics, a False Negative (failing to alert a consignee who then incurs idle labor or demurrage) is significantly more expensive than a False Positive (checking status on a container that clears early). The classifier prioritizes high sensitivity (95.4% recall) to protect consignee SLAs.
-
-### 3. Prediction Interval Calibration
-- **Method:** Out-of-Bag (OOB) empirical residual quantiles from training data ($q_{10} = -14.94\text{h}, q_{90} = +16.76\text{h}$).
-- **Nominal Target:** 80.0%
-- **Measured Empirical Test Coverage:** **74.7%** on held-out test data.
-- **Reporting Stance:** Transparently documented as **exploratory uncertainty intervals** rather than claiming 80% coverage, reflecting heteroscedastic terminal queueing dynamics.
-
-### 4. Global Feature Drivers (Tree MDI)
-1. `port_congestion` (**21.42%**): Dominant predictor of terminal queueing and berth dwell.
-2. `observed_delay_at_port_hours` (**14.26%**): Incurred upstream schedule delay floor.
-3. `congestion_weather_interaction` (**13.37%**): Compounded weather and port queueing.
-4. `sailing_delay_hours` (**9.79%**): Sea transit speed reduction.
-5. `upstream_delay_ratio` (**7.69%**): Relative voyage disruption ratio.
-6. `congestion_buffer_ratio` (**7.53%**): Congestion stress on scheduled port dwell.
+This project focuses on the high-value **Port Arrival Checkpoint** (outer pilot station / anchorage): estimating the final delivery timestamp, delay magnitude in hours, and the likelihood of exceeding an operational threshold (24 hours) while the voyage is in-progress.
 
 ---
 
-## 🔍 Worked Shipment Example: `SHP-0001`
+## 2. Intended Users & Practical Decision Support
 
-To ensure full audibility, here is the exact numerical trace for shipment `SHP-0001` from [`data/shipments.csv`](data/shipments.csv):
+The system is designed for **supply chain dispatchers, freight forwarders, and logistics operations managers**. It provides actionable decision intelligence:
 
-### 1. Voyage Profile & Planned Journey
-- **Shipment ID:** `SHP-0001` | **Carrier:** *CMA CGM Group* | **Vessel:** *Nordic Horizon*
-- **Trade Lane:** *Shanghai to Hamburg* via *Port Delta (Dubai)*
-- **Scheduled Departure:** `2025-03-15 12:00:00 UTC`
-- **Planned Stage Durations:** Sailing: 352.98h | Port Dwell: 29.31h | Customs: 19.72h | Inland Final: 18.15h
-- **Planned Total Journey Duration:** $352.98 + 29.31 + 19.72 + 18.15 = \mathbf{420.16\text{ hours}}$
-- **Scheduled ETA:** `2025-03-15 12:00:00 UTC` + 420.16h = $\mathbf{2025\text{-}04\text{-}02\text{ }00:09:36\text{ UTC}}$
+| Risk Tier | Late Probability | Operational Decision Interventions |
+| :---: | :---: | :--- |
+| 🔴 **Critical** | $\ge 75\%$ | **Immediate SLA Protection:** Alert consignee receiving warehouses with revised delivery windows; contact port agent to request priority container berthing or off-dock drayage; pre-lodge customs manifests (EDI); re-book onward rail/truck connections to eliminate demurrage. |
+| 🟠 **High** | $50\% - 75\%$ | **Active Mitigation:** Track terminal pilot queue; alert destination dispatchers to standby for off-peak gate-out; prepare alternate customs documentation. |
+| 🟡 **Moderate** | $25\% - 50\%$ | **Standard Monitoring:** Monitor port congestion index changes; confirm scheduled container crane discharge window with ocean carrier. |
+| 🟢 **Low** | $< 25\%$ | **Automated Tracking:** Journey is progressing within acceptable tolerances. Maintain standard automated tracking updates. |
 
-### 2. Observed Checkpoint Facts (Port Arrival)
-- Departure Delay: $+3.35\text{ h}$ | Ocean Sailing Delay: $+17.78\text{ h}$
-- **Observed Upstream Delay at Checkpoint:** $3.35 + 17.78 = \mathbf{+21.13\text{ hours}}$
-- **Terminal Signals:** Port Congestion $= 0.228$ (favorable) | Weather Severity $= 0.667$ (rough sea state)
-
-### 3. Model In-Flight Predictions (Inference Output)
-- **Predicted Total Delay:** $\mathbf{+41.59\text{ hours}}$
-- **Predicted Remaining Downstream Delay:** $41.59 - 21.13 = \mathbf{+20.46\text{ hours}}$
-- **Predicted Final ETA:** `2025-04-02 00:09:36 UTC` + 41.59h = $\mathbf{2025\text{-}04\text{-}03\text{ }17:45:00\text{ UTC}}$
-- **Exploratory Uncertainty Band:** $[+26.65\text{h}, +58.35\text{h}] \longrightarrow [\text{03 Apr 02:48 UTC}, \text{04 Apr 10:30 UTC}]$
-- **Late Probability:** $\mathbf{95.9\%}$ ($>24\text{h}$ threshold) $\longrightarrow$ **Risk Tier: CRITICAL**
-- **Tree SHAP Attributions:** Observed Upstream Delay pushed ETA later by $+5.19\text{h}$ and Sailing Delay by $+3.39\text{h}$; favorable Port Congestion buffered downstream delay by $-5.96\text{h}$ and port buffer by $-3.27\text{h}$.
-
-### 4. Post-Delivery Historical Audit (Withheld During Prediction)
-- Actual Downstream Delays: Port Dwell: $+11.47\text{h}$ | Customs: $+5.60\text{h}$ | Final Delivery: $+0.95\text{h}$
-- **Actual Total Delay:** $21.13\text{h (upstream)} + 18.02\text{h (downstream)} = \mathbf{+39.15\text{ hours}}$
-- **Actual Delivery Timestamp:** `2025-04-02 00:09:36 UTC` + 39.15h = $\mathbf{2025\text{-}04\text{-}03\text{ }15:18:36\text{ UTC}}$
-- **Prediction Absolute Error:** $|41.59 - 39.15| = \mathbf{2.44\text{ hours}}$ (Accurate within 2.5 hours).
-- **Exact ETA Arithmetic Equality:**
-  $$\text{Scheduled ETA } (2025\text{-}04\text{-}02\text{ }00:09:36) + \text{Predicted Delay } (41.59\text{h}) = \text{Predicted ETA } (2025\text{-}04\text{-}03\text{ }17:45:00) \quad [\text{EXACT}]$$
+*Disclaimer:* The system serves as decision support. It does not claim to automatically prevent physical carrier or terminal delays.
 
 ---
 
-## 🛡️ Prediction Checkpoint & Target Leakage Prevention
+## 3. Key System Features
 
-Predictions occur strictly at the **Port Arrival Checkpoint** (vessel arrival at outer pilot station / anchorage).
+1. **Point Delay & Final ETA Prediction:** Estimates final delivery delay in hours and calculates predicted delivery timestamp: $\widehat{T}_{\text{ETA}} = T_{\text{sched\_arr}} + \widehat{\text{Delay}}_{\text{total}}$.
+2. **Calibrated Delay-Risk Scoring:** Random Forest Classifier predicting the calibrated probability that total delay exceeds 24.0 hours, mapped to actionable risk tiers (Low, Moderate, High, Critical).
+3. **Exploratory Uncertainty Intervals:** Out-of-Bag (OOB) empirical residual quantiles ($q_{10} = -14.94\text{h}, q_{90} = +16.76\text{h}$) providing realistic uncertainty spreads.
+4. **Stage-by-Stage Delay Waterfall:** Disaggregates delay across 5 discrete journey stages without double-counting.
+5. **Exact Tree SHAP Attributions:** Decomposes tree decision paths to quantify the exact hours contributed by port congestion, weather severity, and ocean transit friction.
+6. **Interactive 4-Tab Streamlit Dashboard:** Features live fleet monitoring, single-shipment root-cause deep-dives with operator playbooks, a What-If scenario builder with congestion sensitivity curves, and held-out benchmark evaluation charts.
+7. **Strict Target Leakage Guard:** Enforces an allowlist of 13 checkpoint-available features and strips 14 downstream actual outcomes.
+
+---
+
+## 4. Architecture & End-to-End Data Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. DATA GENERATION & EVENT-TIME SIMULATION (src/data_generator.py)          │
+│    300 synthetic shipments • 5 stages • Chronological ISO-8601 timestamps   │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2. CHECKPOINT FEATURE ENGINEERING (src/features.py)                         │
+│    Feature Allowlist (13 features) • Strict stripping of downstream actuals │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 3. MODEL TRAINING & EVALUATION PIPELINE (src/train.py)                      │
+│    Stratified 75/25 split (Seed 42) • Pipeline SimpleImputer (Train only)   │
+│    Random Forest Regressor (300 trees, OOB) • Classifier (200 trees)        │
+│    Benchmark Baselines: Operational Heuristic & Naive (Zero Future Delay)   │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 4. PREDICTION ENGINE & EXPLAINABILITY (src/predict.py, src/explain.py)      │
+│    In-flight ETA • OOB confidence bands • Risk tiers • Tree SHAP attributions│
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 5. USER INTERFACES & DELIVERABLES                                           │
+│    Streamlit Dashboard (app.py) • 3-Page PDF Technical Report (PyMuPDF)      │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 5. Five Journey Stages & Delay Propagation Cascade
+
+The simulated journey comprises five discrete stages:
+1. **Departure handling:** Origin terminal loading and vessel dispatch.
+2. **Ocean sailing / transit:** Deep-sea navigational voyage.
+3. **Port processing / dwell:** Outer anchorage waiting, berthing, and crane discharge.
+4. **Customs clearance:** Regulatory document review and physical inspection.
+5. **Final delivery:** Inland drayage / rail transit to final destination consignee.
+
+### Cascading Delay Equations
+$$\Delta_{\text{dep}} = \max\left(0, \mathcal{N}(2.0 + 8.5 \cdot \text{Weather}, 4.5^2)\right)$$
+$$\Delta_{\text{sail}} = \max\left(0, \mathcal{N}(3.0 + 13.5 \cdot \text{Weather} + 0.15 \cdot \Delta_{\text{dep}}, 6.0^2)\right)$$
+$$\Delta_{\text{port}} = \max\left(0, \mathcal{N}(2.0 + 26.0 \cdot \text{Congestion} + 0.22 \cdot \Delta_{\text{sail}}, 7.5^2)\right)$$
+$$\Delta_{\text{customs}} = \max\left(0, \mathcal{N}(1.5 + 13.0 \cdot \text{Congestion} + 0.18 \cdot \Delta_{\text{port}}, 5.0^2)\right)$$
+$$\Delta_{\text{final}} = \max\left(0, \mathcal{N}(1.0 + 0.12 \cdot \Delta_{\text{customs}} + 3.0 \cdot \text{Weather}, 4.0^2)\right)$$
+
+*Environmental Indicators:* $\text{Congestion} \sim \text{Beta}(2.2, 2.2)$ and $\text{Weather} \sim \text{Beta}(1.8, 3.2)$ ($0.0–1.0$ scale).
+
+### Mathematical Definitions & Zero Double-Counting
+- **Planned Duration ($D_{\text{planned}}$):** Sum of planned sailing, port dwell, customs, and final transit hours.
+- **Scheduled ETA ($T_{\text{sched\_arr}}$):** $T_{\text{sched\_dep}} + D_{\text{planned}}$.
+- **Incremental Stage Delay ($\Delta_s$):** $D_s^{\text{actual}} - D_s^{\text{planned}} \ge 0$.
+- **Cumulative Delay at Milestone $k$ ($C_k$):** $\sum_{s=1}^k \Delta_s$.
+  - At Port Checkpoint: $C_2 = \Delta_{\text{dep}} + \Delta_{\text{sail}}$ (Observed Upstream Delay).
+  - At Final Delivery: $C_5 = \sum_{s=1}^5 \Delta_s$ (Ground Truth Total Delay).
+- **Actual Delivery Timestamp:** $T_{\text{actual\_deliv}} = T_{\text{sched\_arr}} + C_5$.
+- **Zero Double-Counting:** Incremental stage delays and cumulative schedule deviations are never summed together. Across all 300 rows: $\max |\sum_{s=1}^5 \Delta_s - \text{Total Delay}| = 0.00\text{ h}$.
+
+---
+
+## 6. Prediction Checkpoint & Target Leakage Prevention
+
+Predictions occur strictly at the **Destination Port Outer Anchorage / Pilot Station Arrival Checkpoint**.
 
 ```
    [Departure] ──► [Ocean Sailing] ──► [PORT ARRIVAL CHECKPOINT] ──► [Port Dwell] ──► [Customs] ──► [Final Delivery]
   └────────────── KNOWN ──────────────┘                          └───────────── UNKNOWN FUTURE ─────────────┘
 ```
 
-### Explicit Feature Allowlist ($X^{\text{port}}$)
-Only 13 features are passed to the model:
-1. `planned_sailing_hours`: Planned sea transit duration (72–360h).
-2. `planned_port_hours`: Planned terminal dwell buffer (8–36h).
-3. `planned_customs_hours`: Planned regulatory clearance buffer (4–24h).
-4. `planned_final_hours`: Planned inland linehaul duration (12–60h).
-5. `planned_remaining_hours_at_port`: Sum of planned remaining stages.
-6. `departure_delay_hours`: Incurred origin terminal delay ($\Delta_{\text{dep}} \ge 0$).
-7. `sailing_delay_hours`: Incurred ocean transit delay ($\Delta_{\text{sail}} \ge 0$).
-8. `observed_delay_at_port_hours`: Cumulative delay at port milestone ($\Delta_{\text{dep}} + \Delta_{\text{sail}}$).
-9. `port_congestion`: Point-in-time terminal congestion index ($0.0–1.0$).
-10. `weather_severity`: Point-in-time meteorological severity index ($0.0–1.0$).
-11. `upstream_delay_ratio`: Interaction: observed delay / planned sailing duration.
-12. `congestion_weather_interaction`: Interaction: port congestion $\times$ weather severity.
-13. `congestion_buffer_ratio`: Interaction: port congestion / planned port dwell buffer.
+### Feature Allowlist ($X^{\text{port}}$ — 13 Features)
+1. `planned_sailing_hours`
+2. `planned_port_hours`
+3. `planned_customs_hours`
+4. `planned_final_hours`
+5. `planned_remaining_hours_at_port`
+6. `departure_delay_hours`
+7. `sailing_delay_hours`
+8. `observed_delay_at_port_hours` ($= \Delta_{\text{dep}} + \Delta_{\text{sail}}$)
+9. `port_congestion`
+10. `weather_severity`
+11. `upstream_delay_ratio` ($= \text{observed} / \text{planned\_sailing}$)
+12. `congestion_weather_interaction` ($= \text{congestion} \times \text{weather}$)
+13. `congestion_buffer_ratio` ($= \text{congestion} / \text{planned\_port}$)
 
-### Forbidden Downstream Columns Strictly Excluded
-The feature pipeline strictly removes 14 downstream columns:
+### Forbidden Downstream Columns (14 Columns Stripped)
 `port_delay_hours`, `customs_delay_hours`, `final_stage_delay_hours`, `actual_port_hours`, `actual_customs_hours`, `actual_final_hours`, `cum_delay_port_departure_hours`, `cum_delay_customs_done_hours`, `actual_port_departure`, `actual_customs_done`, `actual_delivery`, `actual_total_delay_hours`, `actual_remaining_delay_hours`, and `late_delivery`.
 
----
-
-## 📐 Mathematical Event-Time Definitions & Delay Mechanics
-
-To prevent accidental double-counting, the event-time model formally distinguishes **incremental stage delay** from **cumulative schedule deviation**:
-
-1. **Planned Total Duration ($D_{\text{planned}}$):**
-   $$D_{\text{planned}} = D_{\text{sail}}^{\text{plan}} + D_{\text{port}}^{\text{plan}} + D_{\text{customs}}^{\text{plan}} + D_{\text{final}}^{\text{plan}}$$
-2. **Scheduled ETA ($T_{\text{sched\_arr}}$):**
-   $$T_{\text{sched\_arr}} = T_{\text{sched\_dep}} + D_{\text{planned}}$$
-3. **Incremental Stage Delay ($\Delta_s$):**
-   $$\Delta_s = D_s^{\text{actual}} - D_s^{\text{planned}} \ge 0, \quad \forall s \in \{1, 2, 3, 4, 5\}$$
-4. **Cumulative Delay at Milestone $k$ ($C_k$):**
-   $$C_k = \sum_{s=1}^k \Delta_s$$
-   - Checkpoint Upstream Delay: $C_2 = \Delta_{\text{dep}} + \Delta_{\text{sail}}$
-   - Final Delivery Ground Truth: $C_5 = \sum_{s=1}^5 \Delta_s = \text{Total Delay}$
-5. **Actual Delivery Timestamp ($T_{\text{actual\_deliv}}$):**
-   $$T_{\text{actual\_deliv}} = T_{\text{sched\_arr}} + C_5 = T_{\text{sched\_arr}} + \text{Total Delay}$$
-6. **Ground-Truth Late Label ($y_{\text{late}}$):**
-   $$y_{\text{late}} = \mathbb{I}(\text{Total Delay} > 24.0\text{ hours})$$
-7. **Predicted Final ETA ($\widehat{T}_{\text{ETA}}$):**
-   $$\widehat{T}_{\text{ETA}} = T_{\text{sched\_arr}} + \widehat{\text{Delay}}_{\text{total}}$$
-
-*Audit Verification:* Across all 300 rows in [`data/shipments.csv`](data/shipments.csv), $\max |\sum_{s=1}^5 \Delta_s - \text{Total Delay}| = \mathbf{0.00\text{ hours}}$ (zero double-counting).
+Preprocessing imputers are fitted inside an `sklearn.pipeline.Pipeline` on training data only.
 
 ---
 
-## 🎯 Logistics Operator Action Playbook
+## 7. Dataset Description & Synthetic Data Disclaimer
 
-The system translates delay predictions into concrete operational actions via automated decision rules:
+- **Volume:** 300 completed multi-stage container voyages saved in [`data/shipments.csv`](data/shipments.csv).
+- **Carriers:** Maersk Line, MSC Mediterranean, CMA CGM Group, Hapag-Lloyd, Ocean Network Express.
+- **Trade Lanes:** Shanghai–Rotterdam, Singapore–Sydney, Mumbai–Dubai, Los Angeles–Hamburg, Busan–Antwerp.
+- **Timestamps:** ISO-8601 second-precision UTC strings (`.floor("s")`).
 
-| Risk Tier | Late Probability | Recommended Operational Interventions |
-| :---: | :---: | :--- |
-| 🔴 **Critical** | $\ge 75\%$ | **Immediate SLA Protection:** Issue formal revised delivery notices to consignee receiving teams; request priority container offloading or off-dock drayage to avoid yard dwell; pre-lodge customs manifests (EDI); re-book inland rail/drayage appointments to prevent demurrage penalties. |
-| 🟠 **High** | $50\% - 75\%$ | **Active Mitigation:** Contact terminal agent to confirm berth allocation; alert destination dispatchers to standby for off-peak gate-out; prepare alternate customs documentation. |
-| 🟡 **Moderate** | $25\% - 50\%$ | **Standard Monitoring:** Monitor port pilot board for anchorage queue changes; verify container crane discharge window with ocean carrier. |
-| 🟢 **Low** | $< 25\%$ | **Automated Tracking:** Journey is progressing within acceptable tolerances. Maintain standard milestone notifications. |
+> **⚠️ Synthetic Data Disclaimer:** All shipment records, delay figures, and environmental indices are mathematically modeled synthetic representations. Results demonstrate compliance with the simulation mechanics and do not establish empirical real-world carrier predictive accuracy.
 
 ---
 
-## 🖥️ Streamlit Dashboard Walkthrough
-
-Launch via `streamlit run app.py` (or `python app.py`) to access four dedicated views:
-
-- **Tab 1: 🌐 Fleet Intelligence & Live Monitoring**
-  - KPI metric cards (Active Shipments, On-Time Arrival %, Mean Expected Delay, Critical Risk Shipments).
-  - Multi-dimensional filters (Origin, Destination, Late Risk Category, Free-text search by ID/Vessel/Carrier).
-  - Fleet-wide predicted delay distribution histogram and sortable table with status badges.
-- **Tab 2: 🔍 Shipment Root-Cause Deep-Dive & Operator Playbook**
-  - Visual 5-stage progression stepper (*Origin $\to$ Ocean $\to$ Port Checkpoint $\to$ Customs $\to$ Delivery*).
-  - Clear visual demarcation: **Observed Facts** vs **AI Predictions** vs **Unknown Future Stages**.
-  - Interactive **Delay Propagation Waterfall** chart with cumulative deviation tracking.
-  - **Tree SHAP Attributions** showing exact hours added/subtracted by each factor.
-  - Collapsible **Post-Delivery Historical Audit** for retrospective evaluation.
-- **Tab 3: 🧪 What-If Scenario Simulator & Journey Builder**
-  - Interactive sliders for Departure Delay, Sailing Delay, Port Congestion, and Weather Severity.
-  - Real-time recalculation of Predicted ETA, Delay, and Late Probability.
-  - **Terminal Congestion Sensitivity Curve** plotting delay response across 0.0 to 1.0 congestion levels.
-- **Tab 4: 📊 Model Performance & Benchmarks**
-  - Model vs Baseline scorecard.
-  - Actual vs Predicted delay parity scatter plot with identity reference line.
-  - Confusion matrix display, Out-of-Bag calibration spread, and global feature importance rankings.
-
----
-
-## 🧪 Automated Unit Test Suite
-
-The repository includes 13 automated unit tests in [`tests/test_pipeline.py`](tests/test_pipeline.py):
-
-```bash
-python -m pytest -v
-```
-
-1. `test_generator_size_and_targets`: Validates synthetic data schema and positive delays.
-2. `test_features_exclude_future_target`: Validates exact feature count and allowlist.
-3. `test_forbidden_columns_leakage_rejection`: Confirms all 14 forbidden columns are stripped.
-4. `test_eta_arithmetic_consistency`: Confirms scheduled and actual timestamps match mathematical definitions.
-5. `test_dataset_validation_rejects_negative_delays`: Verifies dataset validator catches negative durations.
-6. `test_dataset_validation_rejects_double_counting`: Verifies validator catches stage sum discrepancies.
-7. `test_explanation_mentions_uncertainty`: Confirms statistical disclaimers in explanations.
-8. `test_prediction_dataframe_confidence_intervals`: Validates batch prediction intervals and risk categories.
-9. `test_single_prediction_and_attributions`: Confirms Tree SHAP attributions sum to tree prediction delta.
-10. `test_stage_waterfall_structure`: Validates 5-stage delay waterfall structure.
-11. `test_baseline_and_model_evaluation_metrics`: Checks model MAE < baseline MAE and confusion matrix sum.
-12. `test_predicted_eta_exact_arithmetic`: Confirms `predicted_eta == scheduled_arrival + predicted_delay_hours`.
-13. `test_shp0001_worked_example_matches_report`: Confirms exact reproduction of worked example `SHP-0001`.
-
----
-
-## 📁 Repository Structure
+## 8. Repository Structure
 
 ```
 Shipment-ETA-AI/
 ├── app.py                      # Interactive 4-tab Streamlit decision-support dashboard
-├── requirements.txt            # Constrained dependencies (pandas, numpy, scikit-learn, etc.)
-├── README.md                   # Comprehensive assignment documentation & metrics
+├── requirements.txt            # Constrained dependencies
+├── README.md                   # Comprehensive project documentation & usage guide
 ├── data/
 │   └── shipments.csv           # 300 validated synthetic shipment records
 ├── artifacts/
@@ -301,22 +196,282 @@ Shipment-ETA-AI/
 │   ├── explain.py              # Tree SHAP path attributions & stage waterfall generator
 │   └── generate_pdf_report.py  # Script generating the 3-page PDF technical report
 ├── reports/
-│   ├── TECHNICAL_REPORT.md     # Full technical report (8 sections + worked example)
+│   ├── TECHNICAL_REPORT.md     # Full technical report (6 sections + worked example)
 │   ├── TECHNICAL_REPORT.pdf    # Final 3-page publication-quality PDF deliverable
-│   └── TECHNICAL_REPORT_TEMPLATE.md # Executive template & reference brief
+│   └── TECHNICAL_REPORT_TEMPLATE.md # Executive technical brief & reference template
 └── tests/
-    └── test_pipeline.py        # Automated test suite (13 comprehensive tests)
+    └── test_pipeline.py        # Automated test suite (13 comprehensive unit tests)
 ```
 
 ---
 
-## 📄 Deliverables
+## 9. Prerequisites & Supported Environment
 
-- **Markdown Technical Report:** [reports/TECHNICAL_REPORT.md](reports/TECHNICAL_REPORT.md)
-- **Executive 3-Page Printable PDF:** [reports/TECHNICAL_REPORT.pdf](reports/TECHNICAL_REPORT.pdf)
-- **Executive Reference Template:** [reports/TECHNICAL_REPORT_TEMPLATE.md](reports/TECHNICAL_REPORT_TEMPLATE.md)
-- **Evaluation Metrics JSON:** [artifacts/eta_model.metrics.json](artifacts/eta_model.metrics.json)
+- **Python Version:** Python 3.10, 3.11, 3.12, 3.13, or 3.14 (Verified on Python 3.14.6 64-bit on Windows).
+- **Operating System:** Windows 10/11, macOS, or Linux.
+- **Dependencies:** Constrained in [`requirements.txt`](requirements.txt):
+  - `pandas>=2.1`, `numpy>=1.26`, `scikit-learn>=1.4`, `streamlit>=1.32`, `joblib>=1.3`, `pytest>=8.0`, `matplotlib>=3.8`, `pymupdf>=1.24`.
 
 ---
 
-*Validated and verified by Kalyan Dasari · October 2026.*
+## 10. Local Setup & Installation
+
+### Windows PowerShell Setup
+
+```powershell
+# 1. Navigate to the repository
+cd "K:\Big Things\Shipment-ETA-AI"
+
+# 2. Create virtual environment
+py -3.11 -m venv .venv
+# (or use default python): python -m venv .venv
+
+# 3. Activate virtual environment
+.\.venv\Scripts\Activate.ps1
+
+# 4. Upgrade pip and install pinned requirements
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+> **🔒 Safe Alternative if PowerShell Execution Policy Blocks Activation:**  
+> If you receive an `Execution_Policies` script restriction warning, invoke the virtual environment's Python executable directly **without weakening system-wide security settings**:
+> ```powershell
+> .\.venv\Scripts\python.exe -m pip install --upgrade pip
+> .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+> ```
+
+### macOS / Linux Setup
+
+```bash
+cd Shipment-ETA-AI
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+---
+
+## 11. Execution Commands (Step-by-Step Pipeline)
+
+Execute the full pipeline in the documented order:
+
+```powershell
+# Step 1: Generate 300 validated synthetic shipments
+python -m src.data_generator
+# Output: Generated 300 validated synthetic shipments at data/shipments.csv
+
+# Step 2: Train models, benchmark baselines, and calibrate uncertainty
+python -m src.train
+# Output: Saved model artifact to artifacts/eta_model.joblib and metrics to artifacts/eta_model.metrics.json
+
+# Step 3: Run complete automated test suite (13 tests)
+python -m pytest -v
+# Output: 13 passed in ~4.2s
+
+# Step 4: Compile publication-quality 3-page PDF technical report
+python -m src.generate_pdf_report
+# Output: Generated PDF technical report at: reports/TECHNICAL_REPORT.pdf (Total page count: 3 pages)
+
+# Step 5: Launch the interactive Streamlit decision-support dashboard
+streamlit run app.py
+# (Alternative): python app.py (auto-delegates to Streamlit runner)
+# Output: Local URL: http://localhost:8501
+```
+
+---
+
+## 12. Interactive Streamlit Dashboard Usage
+
+Open `http://localhost:8501` to access four dedicated operational tabs:
+
+1. **Tab 1: 🌐 Fleet Intelligence & Live Monitoring**
+   - KPI cards: Active Shipments, On-Time Arrival %, Mean Expected Delay, Critical Risk Count.
+   - Interactive filters: Origin Port, Destination Port, Late Risk Tier, and Free-text Search.
+   - Fleet delay distribution histogram and sortable shipment table with risk badges.
+2. **Tab 2: 🔍 Shipment Root-Cause Deep-Dive & Operator Playbook**
+   - Visual 5-stage progression stepper (*Origin $\to$ Ocean $\to$ Port Checkpoint $\to$ Customs $\to$ Final Delivery*).
+   - Strict visual demarcation: **Observed Facts** vs **AI Predictions** vs **Unknown Future Stages**.
+   - **Operator Decision Playbook:** Actionable recommendations tailored to the shipment's risk tier.
+   - **Interactive Delay Propagation Waterfall:** Disaggregates stage delays and tracks cumulative deviation.
+   - **Tree SHAP Attributions:** Quantifies exact hours contributed or buffered by each feature.
+   - Collapsible **Post-Delivery Historical Audit** for retrospective validation.
+3. **Tab 3: 🧪 What-If Scenario Simulator & Journey Builder**
+   - Sliders for Departure Delay, Sailing Delay, Port Congestion, and Weather Severity.
+   - Dynamic Delay Threshold slider (12h to 72h).
+   - Real-time recalculation of Predicted ETA, Delay, and Late Probability.
+   - **Terminal Congestion Sensitivity Curve:** Visualizes delay trajectory as congestion scales from 0.0 to 1.0.
+4. **Tab 4: 📊 Model Performance & Benchmarks**
+   - Model vs Baseline performance scorecard.
+   - Actual vs Predicted delay parity scatter plot with identity reference line.
+   - Confusion matrix display, Out-of-Bag calibration spread, and global feature importance rankings.
+
+---
+
+## 13. How to Interpret Model Predictions & Metrics
+
+### Regression Benchmark Table (Held-Out Test Set, $N_{\text{test}} = 75$, Seed 42)
+
+| Model / Approach | Held-Out Test MAE | Held-Out Test RMSE | Test $R^2$ Score | Error Reduction vs Benchmark |
+| :--- | :---: | :---: | :---: | :---: |
+| **Naive Baseline (Zero Future Delay)** | 29.168 hours | 32.163 hours | -2.708 | **+66.01% error vs AI model** |
+| **Operational Heuristic Baseline** | 11.531 hours | 14.175 hours | 0.280 | Benchmark Baseline |
+| **Random Forest AI Regressor** | **9.915 hours** | **12.693 hours** | **0.422** | **+14.01% improvement vs heuristic** |
+
+- **Understanding MAE:** Mean Absolute Error is the average margin in hours between the predicted and actual final delivery timestamps. The Naive baseline produces an unacceptably high error of 29.17 hours because it assumes downstream stages experience zero delay. The Random Forest model reduces this error to **9.915 hours**, capturing 42.2% of downstream delay variance.
+
+### Classification Performance ($> 24.0$h Delay Threshold)
+- **Accuracy:** `84.0%` (63 of 75 test shipments correctly classified).
+- **Precision:** `87.3%` (87.3% of late-flagged shipments are genuinely late).
+- **Recall (Sensitivity):** `95.4%` (captures 62 of 65 severely late shipments).
+- **F1-Score:** `0.912` | **ROC-AUC:** `0.780`.
+- **Confusion Matrix:** `[[1, 9], [3, 62]]` (TN: 1, FP: 9, FN: 3, TP: 62).
+- **Decision Trade-Off:** The classifier operating point prioritizes high sensitivity (95.4% recall) because missing a severely delayed shipment (False Negative) causes missed consignee delivery windows and demurrage, whereas checking an on-time shipment (False Positive) incurs negligible operational cost.
+
+### Uncertainty Interval Calibration
+- **Residual Quantiles:** Derived from Out-of-Bag training residuals ($q_{10} = -14.94\text{h}, q_{90} = +16.76\text{h}$).
+- **Nominal Target:** 80.0% | **Measured Held-Out Test Coverage:** **74.7%**.
+- **Reporting Stance:** Labeled **exploratory uncertainty intervals** due to heteroscedastic terminal queueing variance across extreme congestion levels.
+
+---
+
+## 14. Audited Worked Numerical Shipment Example (`SHP-0001`)
+
+Verified directly from [`data/shipments.csv`](data/shipments.csv) and [`predict_single`](src/predict.py):
+
+| Element | Parameter / Value | Description & Formula |
+| :--- | :--- | :--- |
+| **Voyage Profile** | `SHP-0001` · CMA CGM Group · *Nordic Horizon* | Route: *Shanghai to Hamburg* via *Port Delta (Dubai)* |
+| **Scheduled Departure** | `2025-03-15 12:00:00 UTC` | Initial planned voyage departure |
+| **Planned Stage Durations** | Sailing: 352.98h, Port: 29.31h, Customs: 19.72h, Final: 18.15h | Planned Total Journey: **420.16 hours** |
+| **Scheduled ETA** | `2025-04-02 00:09:36 UTC` | $\text{Departure} + 420.16\text{h}$ |
+| **Checkpoint Observations** | Dep Delay: $+3.35\text{h}$, Sailing Delay: $+17.78\text{h}$ | **Observed Upstream Delay:** $\mathbf{+21.13\text{ hours}}$ |
+| **Terminal Signals** | Port Congestion: $0.228$ (favorable), Weather: $0.667$ | Environmental signals at pilot station arrival |
+| **Predicted Total Delay** | $\mathbf{+41.59\text{ hours}}$ | Regressor point prediction |
+| **Predicted Remaining Delay**| $\mathbf{+20.46\text{ hours}}$ | $\text{Predicted Delay} - \text{Observed Delay}$ ($41.59 - 21.13$) |
+| **Predicted Final ETA** | $\mathbf{2025\text{-}04\text{-}03\text{ }17:45:00\text{ UTC}}$ | $\text{Scheduled ETA} + 41.59\text{h}$ [Exact Match] |
+| **Uncertainty Interval** | $[+26.65\text{h}, +58.35\text{h}]$ | $[\text{03 Apr 02:48 UTC}, \text{04 Apr 10:30 UTC}]$ |
+| **Late Risk Assessment** | Probability: **95.9%** $\to$ **CRITICAL RISK** | Exceeds 24h threshold with high confidence |
+| **Tree SHAP Attributions** | Upstream Delay: $+5.19\text{h}$, Sailing Delay: $+3.39\text{h}$ | Pushed ETA later; favorable congestion ($-5.96\text{h}$) buffered delay |
+| **Post-Delivery Actuals** | Port: $+11.47\text{h}$, Customs: $+5.60\text{h}$, Final: $+0.95\text{h}$ | **Actual Total Delay:** $\mathbf{+39.15\text{ hours}}$ |
+| **Actual Delivery Timestamp**| $\mathbf{2025\text{-}04\text{-}03\text{ }15:18:36\text{ UTC}}$ | Recorded post-delivery for evaluation only |
+| **Prediction Absolute Error**| $\mathbf{2.44\text{ hours}}$ | $|41.59 - 39.15| = 2.44\text{ hours}$ (Accurate within 2.5 hours) |
+
+---
+
+## 15. Automated Tests & Reproducibility
+
+The repository maintains 13 automated unit tests in [`tests/test_pipeline.py`](tests/test_pipeline.py):
+
+```powershell
+python -m pytest -v
+```
+
+- `test_generator_size_and_targets`: Validates 50 synthetic records, target columns, positive delays.
+- `test_features_exclude_future_target`: Validates exact 13 allowlisted features and zero target leakage.
+- `test_forbidden_columns_leakage_rejection`: Confirms all 14 forbidden columns are stripped if present.
+- `test_eta_arithmetic_consistency`: Confirms scheduled arrival and actual delivery timestamps match mathematical formulas.
+- `test_dataset_validation_rejects_negative_delays`: Verifies dataset validator catches negative durations.
+- `test_dataset_validation_rejects_double_counting`: Verifies validator catches stage sum discrepancies.
+- `test_explanation_mentions_uncertainty`: Confirms statistical disclaimer presence in narrative explanations.
+- `test_prediction_dataframe_confidence_intervals`: Validates batch prediction intervals, probability bounds, and risk tiers.
+- `test_single_prediction_and_attributions`: Confirms Tree SHAP attributions sum to decision-tree prediction delta.
+- `test_stage_waterfall_structure`: Validates 5-stage waterfall disaggregation.
+- `test_baseline_and_model_evaluation_metrics`: Verifies AI Model MAE < Heuristic MAE, confusion matrix sum ($N=75$), and interval coverage.
+- `test_predicted_eta_exact_arithmetic`: Confirms $\text{predicted\_eta} == \text{scheduled\_arrival} + \text{predicted\_delay\_hours}$.
+- `test_shp0001_worked_example_matches_report`: Confirms exact reproduction of worked example `SHP-0001` metrics and error ($2.44\text{h}$).
+
+---
+
+## 16. Comprehensive Troubleshooting Guide
+
+| Issue / Symptom | Probable Cause | Verified Resolution |
+| :--- | :--- | :--- |
+| **PowerShell script activation disabled** | Windows Execution Policy blocks `.ps1` scripts | Run using direct executable: `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`, or run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` for the current session only. |
+| **`python app.py` prints warning** | Running Streamlit bare | `app.py` has an auto-launcher that delegates directly. Alternatively run: `streamlit run app.py` or `python -m streamlit run app.py`. |
+| **Port 8501 already in use** | An existing Streamlit server is running | Launch on an alternate port: `streamlit run app.py --server.port 8502`. |
+| **Missing or stale model artifacts** | `artifacts/eta_model.joblib` not found | Regenerate fresh artifacts: `python -m src.data_generator && python -m src.train`. |
+| **`ModuleNotFoundError: No module named 'src'`** | Invoking script without module flag from root | Always execute from repository root using module syntax: `python -m src.train` instead of `python src/train.py`. |
+| **scikit-learn pickle version mismatch** | Environment has a different scikit-learn version | Ensure `scikit-learn>=1.4` is installed via `pip install -r requirements.txt` and retrain via `python -m src.train`. |
+| **Python version incompatible** | Python < 3.10 | Install Python 3.10, 3.11, 3.12, 3.13, or 3.14 and recreate virtual environment. |
+
+---
+
+## 17. Realistic Staged Future Development Roadmap
+
+The proposed future roadmap for transitioning from this verified prototype to an enterprise production deployment is structured across five sequential phases:
+
+```
+[Phase 1: Verified Prototype] ──► [Phase 2: Historical Validation] ──► [Phase 3: Operational Ingestion]
+                                                                                │
+[Phase 5: Production & Drift] ◄── [Phase 4: Decision Support & Conformal] ◄─────┘
+```
+
+### Phase 1 — Reliable Prototype *(Completed)*
+- **Objective:** Establish clean event-time mechanics, zero-leakage checkpoint features, reproducible baseline comparisons, and unit test suite.
+- **Completion Criteria:** Passing automated test suite (13/13 unit tests), verified mathematical arithmetic, and audited 3-page technical report.
+
+### Phase 2 — Real-World Validation *(Proposed)*
+- **Objective:** Ingest permitted historical completed-shipment records from carrier EDI feeds (204/214/315 carrier status messages).
+- **Completion Criteria:** Establish consistent historical milestone timestamps, evaluate model on 6-month temporal rolling holdout data, and verify that error reduction over operational heuristic baselines exceeds 10% across major trade lanes.
+
+### Phase 3 — Operational Data Feeds *(Proposed)*
+- **Objective:** Connect live satellite AIS GPS feeds (Spire/MarineTraffic), ocean weather forecasts (NOAA/Copernicus), and Terminal Operating System (TOS) EDI messages.
+- **Completion Criteria:** Dynamic automated feature recomputation as vessels pass intermediate waypoints, with graceful missing-data fallback and API latency under 500ms.
+
+### Phase 4 — Decision Support & Conformal Calibration *(Proposed)*
+- **Objective:** Implement split conformal prediction for distribution-free interval coverage guarantees, tune risk thresholds based on consignee demurrage cost functions, and record ETA revision histories.
+- **Completion Criteria:** Empirical prediction interval coverage achieving $\ge 80.0\%$ guaranteed coverage across all congestion sub-populations, with pilot operator alert feedback.
+
+### Phase 5 — Production Readiness & Governance *(Proposed)*
+- **Objective:** Deploy containerized prediction microservices with automated model registry versioning, data drift monitoring (Evidently/MLflow), and role-based access control.
+- **Completion Criteria:** Automated alert triggers upon population stability index (PSI) $> 0.20$, zero service downtime during model updates, and SOC2/ISO-compliant audit trails.
+
+---
+
+## 18. Optional 5-Minute Demonstration Walkthrough Plan
+
+If presenting the project in a 5-minute screencast, follow this concise agenda:
+
+- **0:00 – 0:30 | Problem Statement & Practical Motivation:**
+  - Introduce the business cost of maritime delays (anchorage congestion, customs dwell, inland demurrage).
+  - Define the prediction goal at the Port Arrival Checkpoint.
+- **0:30 – 1:15 | Synthetic 5-Stage Delay Propagation:**
+  - Explain the 5 journey stages (*Departure $\to$ Sailing $\to$ Port Dwell $\to$ Customs $\to$ Final Delivery*).
+  - Clarify the difference between incremental stage delay ($\Delta_s$) and cumulative schedule deviation ($C_k$).
+- **1:15 – 2:15 | Checkpoint Observations (Shipment Deep-Dive):**
+  - Open Tab 2 in the dashboard and select shipment `SHP-0001`.
+  - Highlight observed facts available at checkpoint: Scheduled Arrival (`02 Apr 00:09 UTC`), Observed Upstream Delay (`+21.13h`), Port Congestion ($0.228$), Weather Severity ($0.667$).
+- **2:15 – 3:15 | Predictions, Tree SHAP & Operator Playbook:**
+  - Showcase Predicted ETA (`03 Apr 17:45 UTC`), Predicted Delay (`+41.59h`), Uncertainty Interval ($[26.65\text{h}, 58.35\text{h}]$), and Critical Risk badge (95.9%).
+  - Explain Tree SHAP attribution chart (upstream delay pushed ETA later; low congestion buffered delay).
+  - Review the Operator Action Playbook recommendations (consignee notification, priority berthing, customs pre-clearing).
+- **3:15 – 4:15 | Model Benchmarks & Parity Plot:**
+  - Switch to Tab 4 to show the evaluation table: Model MAE (9.915h) vs Operational Heuristic (11.531h) vs Naive (29.168h).
+  - Highlight 84% accuracy, 95.4% recall, confusion matrix, and parity scatter plot.
+- **4:15 – 5:00 | Limitations & Production Roadmap:**
+  - Acknowledge synthetic data assumptions.
+  - Summarize Phase 2–5 roadmap (real AIS telemetry, conformal intervals, temporal backtesting).
+
+*(Note: In accordance with academic integrity guidelines, no pre-recorded video link is fabricated; this outline provides the exact structure for recording).*
+
+---
+
+## 19. Final Submission Deliverables
+
+| Deliverable | File Path | Verification Status |
+| :--- | :--- | :---: |
+| **Interactive Streamlit Dashboard** | [`app.py`](app.py) | Verified (`http://localhost:8501`) |
+| **Comprehensive Technical Report (Markdown)** | [`reports/TECHNICAL_REPORT.md`](reports/TECHNICAL_REPORT.md) | Verified (6 exact sections) |
+| **Executive 3-Page Printable PDF Report** | [`reports/TECHNICAL_REPORT.pdf`](reports/TECHNICAL_REPORT.pdf) | Verified (Exactly 3 pages) |
+| **Executive Brief & Reference Template** | [`reports/TECHNICAL_REPORT_TEMPLATE.md`](reports/TECHNICAL_REPORT_TEMPLATE.md) | Verified |
+| **Evaluation Metrics JSON** | [`artifacts/eta_model.metrics.json`](artifacts/eta_model.metrics.json) | Verified ($N_{\text{test}}=75$) |
+| **Trained ML Models Bundle** | [`artifacts/eta_model.joblib`](artifacts/eta_model.joblib) | Verified |
+| **Validated Synthetic Dataset (300 rows)** | [`data/shipments.csv`](data/shipments.csv) | Verified (Zero double-counting) |
+| **Automated Unit Test Suite (13 tests)** | [`tests/test_pipeline.py`](tests/test_pipeline.py) | Verified (13/13 passing) |
+| **PDF Generation Script** | [`src/generate_pdf_report.py`](src/generate_pdf_report.py) | Verified |
+
+---
+
+*Repository audited, verified, and submitted by Kalyan Dasari · October 2026.*
