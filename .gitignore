@@ -5,3 +5,4 @@ venv/
 .env
 *.pyc
 artifacts/*.joblib
+docs/DEMO_PLAN.md
