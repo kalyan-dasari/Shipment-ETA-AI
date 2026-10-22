@@ -139,10 +139,11 @@ def get_dataset():
     if not DATA_PATH.exists():
         DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
         save_dataset(str(DATA_PATH), n=300, seed=42)
-    return pd.read_csv(
-        DATA_PATH,
-        parse_dates=["scheduled_arrival", "scheduled_departure", "actual_port_arrival", "actual_departure"]
-    )
+    df = pd.read_csv(DATA_PATH)
+    for col in ["scheduled_arrival", "scheduled_departure", "actual_port_arrival", "actual_departure"]:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], utc=True, format="ISO8601")
+    return df
 
 @st.cache_resource
 def get_bundle():
