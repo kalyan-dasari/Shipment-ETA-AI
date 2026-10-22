@@ -28,8 +28,6 @@ An advanced machine learning system and interactive decision-support dashboard f
 15. [Automated Tests & Reproducibility](#15-automated-tests--reproducibility)
 16. [Comprehensive Troubleshooting Guide](#16-comprehensive-troubleshooting-guide)
 17. [Realistic Staged Future Development Roadmap](#17-realistic-staged-future-development-roadmap)
-18. [Optional 5-Minute Demonstration Walkthrough Plan](#18-optional-5-minute-demonstration-walkthrough-plan)
-19. [Final Submission Deliverables](#19-final-submission-deliverables)
 
 ---
 
