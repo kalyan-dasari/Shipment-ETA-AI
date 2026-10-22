@@ -59,11 +59,11 @@ The system is designed for **supply chain dispatchers, freight forwarders, and l
 ## 3. Key System Features
 
 1. **Point Delay & Final ETA Prediction:** Estimates final delivery delay in hours and calculates predicted delivery timestamp: $\widehat{T}_{\text{ETA}} = T_{\text{sched\_arr}} + \widehat{\text{Delay}}_{\text{total}}$.
-2. **Calibrated Delay-Risk Scoring:** Random Forest Classifier predicting the calibrated probability that total delay exceeds 24.0 hours, mapped to actionable risk tiers (Low, Moderate, High, Critical).
+2. **Delay-Risk Probability Scoring:** Random Forest Classifier predicting late arrival probability ($P(\text{Delay} > 24.0\text{h})$), mapped to actionable operational risk tiers (Low, Moderate, High, Critical).
 3. **Exploratory Uncertainty Intervals:** Out-of-Bag (OOB) empirical residual quantiles ($q_{10} = -14.94\text{h}, q_{90} = +16.76\text{h}$) providing realistic uncertainty spreads.
 4. **Stage-by-Stage Delay Waterfall:** Disaggregates delay across 5 discrete journey stages without double-counting.
-5. **Exact Tree SHAP Attributions:** Decomposes tree decision paths to quantify the exact hours contributed by port congestion, weather severity, and ocean transit friction.
-6. **Interactive 4-Tab Streamlit Dashboard:** Features live fleet monitoring, single-shipment root-cause deep-dives with operator playbooks, a What-If scenario builder with congestion sensitivity curves, and held-out benchmark evaluation charts.
+5. **Tree Path Feature Attributions:** Decomposes decision tree splits (tree path attribution) to quantify the impact in hours contributed by port congestion, weather severity, and ocean transit friction relative to baseline.
+6. **Interactive 4-Tab Streamlit Dashboard:** Features global fleet overview, single-shipment root-cause deep-dives with operator decision support, scenario testing with congestion sensitivity curves, and held-out benchmark evaluation charts.
 7. **Strict Target Leakage Guard:** Enforces an allowlist of 13 checkpoint-available features and strips 14 downstream actual outcomes.
 
 ---
@@ -90,7 +90,7 @@ The system is designed for **supply chain dispatchers, freight forwarders, and l
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 4. PREDICTION ENGINE & EXPLAINABILITY (src/predict.py, src/explain.py)      │
-│    In-flight ETA • OOB confidence bands • Risk tiers • Tree SHAP attributions│
+│    In-flight ETA • OOB uncertainty bands • Risk tiers • Tree attributions   │
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
