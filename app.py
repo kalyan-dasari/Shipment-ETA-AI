@@ -29,32 +29,63 @@ st.set_page_config(
 # Custom Styling
 st.markdown("""
 <style>
+    /* Compact Main Container */
+    .block-container {
+        padding-top: 1.25rem !important;
+        padding-bottom: 2rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+        max-width: 100% !important;
+    }
+    /* Tab Styling: eliminate excessive whitespace between tabs */
+    div[data-baseweb="tab-list"] {
+        gap: 8px !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+        padding-bottom: 0px !important;
+        margin-bottom: 1rem !important;
+    }
+    button[data-baseweb="tab"] {
+        font-size: 0.90rem !important;
+        font-weight: 600 !important;
+        padding: 8px 16px !important;
+        color: #94a3b8 !important;
+        background-color: transparent !important;
+        border-radius: 6px 6px 0 0 !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+    button[data-baseweb="tab"]:hover {
+        color: #f8fafc !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #38bdf8 !important;
+        border-bottom: 2px solid #38bdf8 !important;
+    }
     .metric-card {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 16px 18px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-        backdrop-filter: blur(10px);
-        margin-bottom: 12px;
+        background: rgba(30, 41, 59, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 10px 14px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(8px);
+        margin-bottom: 8px;
     }
     .metric-value {
-        font-size: 1.8rem;
+        font-size: 1.45rem;
         font-weight: 700;
-        margin: 4px 0;
+        margin: 2px 0;
         color: #f8fafc;
-        letter-spacing: -0.5px;
+        letter-spacing: -0.3px;
     }
     .metric-label {
-        font-size: 0.8rem;
-        font-weight: 500;
+        font-size: 0.72rem;
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.8px;
+        letter-spacing: 0.6px;
         color: #94a3b8;
     }
     .metric-delta {
-        font-size: 0.8rem;
-        font-weight: 600;
+        font-size: 0.75rem;
+        font-weight: 500;
     }
     .badge-critical {
         background-color: rgba(239, 68, 68, 0.2);
@@ -161,8 +192,9 @@ def get_bundle():
 
 # ----------------- SIDEBAR CONTROLS -----------------
 with st.sidebar:
-    st.markdown("## 🚢 System Controls")
-    st.caption("AI-Powered Shipment ETA & Delay Propagation Engine")
+    st.markdown("### 🚢 Shipment ETA Intelligence")
+    st.caption("AI Decision Support · Port Arrival Checkpoint")
+    st.markdown("---")
 
     # Threshold slider
     delay_threshold = st.slider(
@@ -171,39 +203,43 @@ with st.sidebar:
         max_value=72,
         value=24,
         step=6,
-        help="Shipments with total delay exceeding this threshold are flagged as late."
+        help="Shipments with total predicted delay exceeding this threshold are flagged as late for the on-time KPI."
     )
 
+    # Collapsed Developer / Maintenance Expander
     st.markdown("---")
-    st.markdown("### ⚙️ Model Maintenance")
-    if st.button("🔄 Retrain ML Models", type="primary", width="stretch"):
-        with st.spinner("Retraining Random Forest Ensemble and Probability Calibrator..."):
-            train(str(DATA_PATH), str(MODEL_PATH), late_threshold_hours=delay_threshold)
-            st.cache_resource.clear()
-            st.cache_data.clear()
-        st.success("Model successfully retrained and cached!")
-        st.rerun()
+    with st.expander("🛠️ Developer / Model Maintenance", expanded=False):
+        st.caption("⚠️ Caution: Retraining or regenerating datasets will overwrite existing model artifacts and benchmark numbers.")
+        confirm_maint = st.checkbox("Enable maintenance actions", value=False)
+        
+        if st.button("🔄 Retrain ML Models", disabled=not confirm_maint, use_container_width=True):
+            with st.spinner("Retraining Random Forest Ensemble..."):
+                train(str(DATA_PATH), str(MODEL_PATH), late_threshold_hours=delay_threshold)
+                st.cache_resource.clear()
+                st.cache_data.clear()
+            st.success("Model successfully retrained and cached!")
+            st.rerun()
 
-    if st.button("🎲 Regenerate Dataset", width="stretch"):
-        with st.spinner("Generating 300 validated synthetic shipments with linked stage delays..."):
-            save_dataset(str(DATA_PATH), n=300, seed=int(np.random.randint(1, 9999)))
-            train(str(DATA_PATH), str(MODEL_PATH), late_threshold_hours=delay_threshold)
-            st.cache_resource.clear()
-            st.cache_data.clear()
-        st.success("Fresh synthetic journey dataset generated!")
-        st.rerun()
+        if st.button("🎲 Regenerate Synthetic Dataset", disabled=not confirm_maint, use_container_width=True):
+            with st.spinner("Generating 300 synthetic shipments (seed 42)..."):
+                save_dataset(str(DATA_PATH), n=300, seed=42)
+                train(str(DATA_PATH), str(MODEL_PATH), late_threshold_hours=delay_threshold)
+                st.cache_resource.clear()
+                st.cache_data.clear()
+            st.success("Synthetic dataset refreshed!")
+            st.rerun()
 
     st.markdown("---")
     try:
         b_info = get_bundle()
         m = b_info["metrics"]
-        st.markdown(f"**Prediction Checkpoint:** Port Arrival")
-        st.markdown(f"**Model Type:** Random Forest Regressor")
-        st.markdown(f"**Test MAE:** `{m['regression']['model_mae_hours']} h`")
-        st.markdown(f"**Baseline MAE:** `{m['regression']['baseline_heuristic_mae_hours']} h`")
-        st.markdown(f"**MAE Improvement:** `+{m['regression']['mae_improvement_percent_vs_heuristic']}%`")
-        st.markdown(f"**Delay Risk ROC-AUC:** `{m['classification']['roc_auc']}`")
-        st.markdown(f"**Empirical CI Coverage:** `{m['prediction_intervals']['empirical_test_coverage']*100:.1f}%`")
+        st.markdown("**Held-Out Test Benchmarks**")
+        st.markdown(f"- **Checkpoint:** Port Arrival")
+        st.markdown(f"- **Model MAE:** `{m['regression']['model_mae_hours']} h`")
+        st.markdown(f"- **Baseline MAE:** `{m['regression']['baseline_heuristic_mae_hours']} h`")
+        st.markdown(f"- **MAE Improvement:** `+{m['regression']['mae_improvement_percent_vs_heuristic']}%`")
+        st.markdown(f"- **Late Risk ROC-AUC:** `{m['classification']['roc_auc']}`")
+        st.markdown(f"- **OOB Interval Coverage:** `{m['prediction_intervals']['empirical_test_coverage']*100:.1f}%`")
     except Exception:
         pass
 
@@ -226,26 +262,34 @@ joined["predicted_eta_lower"] = pd.to_datetime(joined["predicted_eta_lower"], ut
 joined["predicted_eta_upper"] = pd.to_datetime(joined["predicted_eta_upper"], utc=True)
 
 # ----------------- MAIN HEADER -----------------
-st.title("🚢 Shipment ETA & Delay Propagation Intelligence")
-st.markdown(
-    "Predict final delivery ETA, estimate delay risk, and uncover stage-by-stage delay propagation "
-    "at the **Port Arrival Checkpoint** using machine learning on synthetic journey data."
-)
+st.markdown("""
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 8px;">
+    <div>
+        <h1 style="margin: 0; font-size: 1.65rem; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+            🚢 Shipment ETA Intelligence
+        </h1>
+        <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: #94a3b8;">
+            Predict final delivery ETA and delay propagation at the <strong>Port Arrival Checkpoint</strong> using machine learning.
+        </p>
+    </div>
+    <div style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 16px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; color: #38bdf8;">
+        🧪 Synthetic demo data · 300 journeys
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ----------------- TABS -----------------
 tab1, tab2, tab3, tab4 = st.tabs([
-    "🌐 Fleet Intelligence",
-    "🔍 Shipment Root-Cause Deep-Dive",
-    "🧪 What-If Scenario Simulator",
-    "📊 Model Performance & Benchmarks"
+    "Fleet Overview",
+    "Shipment Analysis",
+    "Scenario Testing",
+    "Model Evaluation"
 ])
 
 # =========================================================================
-# TAB 1: FLEET INTELLIGENCE & MONITORING
+# TAB 1: FLEET OVERVIEW
 # =========================================================================
 with tab1:
-    st.subheader("Global Fleet Overview & Delay Monitoring")
-
     # High-level KPIs
     total_shipments = len(joined)
     avg_pred_delay = float(joined["predicted_delay_hours"].mean())
@@ -257,7 +301,7 @@ with tab1:
     with c1:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">Active Tracked Shipments</div>
+            <div class="metric-label">Shipments in Dataset</div>
             <div class="metric-value">{total_shipments}</div>
             <div class="metric-delta" style="color: #60a5fa;">Checkpoint: Port Arrival</div>
         </div>
@@ -265,7 +309,7 @@ with tab1:
     with c2:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">Mean Expected Delay</div>
+            <div class="metric-label">Mean Predicted Delay</div>
             <div class="metric-value">{avg_pred_delay:.1f} hrs</div>
             <div class="metric-delta" style="color: #94a3b8;">Range: {joined['predicted_delay_hours'].min():.1f}h – {joined['predicted_delay_hours'].max():.1f}h</div>
         </div>
@@ -273,23 +317,23 @@ with tab1:
     with c3:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">On-Time Arrival Rate</div>
+            <div class="metric-label">Predicted On-Time Rate</div>
             <div class="metric-value">{on_time_rate}%</div>
-            <div class="metric-delta" style="color: {'#4ade80' if on_time_rate > 70 else '#facc15'};">Target threshold: ≤ {delay_threshold}h</div>
+            <div class="metric-delta" style="color: {'#4ade80' if on_time_rate > 50 else '#facc15'};">Delay ≤ {delay_threshold}h ({total_shipments - late_count} of {total_shipments})</div>
         </div>
         """, unsafe_allow_html=True)
     with c4:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">Critical Risk Shipments</div>
+            <div class="metric-label">Critical-Risk Predictions</div>
             <div class="metric-value">{critical_count}</div>
-            <div class="metric-delta" style="color: #f87171;">P(Late > {delay_threshold}h) ≥ 75%</div>
+            <div class="metric-delta" style="color: #f87171;">P(Delay > 24h) ≥ 75% ({critical_count} of {total_shipments})</div>
         </div>
         """, unsafe_allow_html=True)
 
     # Interactive Filters
-    st.markdown("#### 🔍 Filter Fleet")
-    f1, f2, f3, f4 = st.columns(4)
+    st.markdown("#### 🔍 Filter Fleet Shipments")
+    f1, f2, f3, f4 = st.columns([1, 1, 1, 1.2])
     with f1:
         origins = ["All"] + sorted(joined["origin"].unique().tolist())
         selected_origin = st.selectbox("Origin Port", origins)
@@ -316,11 +360,11 @@ with tab1:
             filtered["carrier"].str.contains(search_query, case=False, na=False)
         ]
 
-    # Visual Fleet Analytics Charts
+    # Visual Fleet Analytics Charts (Consistent heights: 240px)
     col_chart1, col_chart2 = st.columns(2)
     with col_chart1:
         st.markdown("**Predicted Delay Distribution Across Fleet**")
-        hist_chart = alt.Chart(filtered).mark_bar(opacity=0.8, color="#3b82f6").encode(
+        hist_chart = alt.Chart(filtered).mark_bar(opacity=0.85, color="#3b82f6").encode(
             x=alt.X("predicted_delay_hours:Q", bin=alt.Bin(maxbins=25), title="Predicted Delay (Hours)"),
             y=alt.Y("count()", title="Shipment Count"),
             tooltip=[
@@ -328,7 +372,7 @@ with tab1:
                 alt.Tooltip("min(predicted_delay_hours):Q", title="Min Delay (h)", format=".1f"),
                 alt.Tooltip("max(predicted_delay_hours):Q", title="Max Delay (h)", format=".1f"),
             ]
-        ).properties(height=260)
+        ).properties(height=240)
         rule = alt.Chart(pd.DataFrame({'threshold': [delay_threshold]})).mark_rule(
             color='#ef4444', strokeWidth=2, strokeDash=[4, 4]
         ).encode(x='threshold:Q')
@@ -345,11 +389,11 @@ with tab1:
                 alt.Tooltip("route:N", title="Route"),
                 alt.Tooltip("predicted_delay_hours:Q", title="Avg Delay (h)", format=".1f"),
             ]
-        ).properties(height=260)
+        ).properties(height=240)
         st.altair_chart(route_chart, width="stretch")
 
     # Fleet Data Table
-    st.markdown(f"**Matching Shipments ({len(filtered)} records)**")
+    st.markdown(f"**Matching Shipments ({len(filtered)} of {total_shipments} records)**")
     display_cols = [
         "shipment_id", "vessel_name", "carrier", "route", "port",
         "scheduled_arrival", "predicted_eta", "predicted_delay_hours",
