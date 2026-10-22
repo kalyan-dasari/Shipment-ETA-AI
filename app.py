@@ -654,13 +654,13 @@ with tab2:
             st.metric("Model Absolute Error", f"{err:.1f} hrs", delta=f"{'Overestimated' if pred_del > act_total_del else 'Underestimated'}")
 
 # =========================================================================
-# TAB 3: WHAT-IF SCENARIO SIMULATOR & CUSTOM JOURNEY BUILDER
+# TAB 3: SCENARIO TESTING
 # =========================================================================
 with tab3:
-    st.subheader("🧪 What-If Scenario Simulator & Journey Builder")
+    st.markdown("### What-If Scenario Testing & Journey Simulation")
     st.markdown(
         "Simulate operational interventions (e.g. priority berthing, schedule adjustments, or weather routing) "
-        "or evaluate a completely custom shipment journey."
+        "or evaluate custom shipment parameters. **Note:** Scenarios are hypothetical model simulations; downstream actuals are strictly withheld."
     )
 
     sim_col1, sim_col2 = st.columns([1, 1.2])
@@ -711,7 +711,7 @@ with tab3:
 
         sim_threshold = st.slider("Risk Evaluation Threshold (hours)", 12, 48, 24, 6)
 
-    # Build input record
+    # Build input record (Checkpoint-available features only)
     now_utc = datetime.now(timezone.utc)
     sim_sched_arrival = now_utc + pd.Timedelta(hours=sim_plan_sail + sim_plan_port + sim_plan_customs + sim_plan_final)
 
@@ -740,7 +740,7 @@ with tab3:
     sim_res = predict_single(sim_record, bundle)
 
     with sim_col2:
-        st.markdown("##### 🔮 Real-Time Simulation Results")
+        st.markdown("##### 🔮 Scenario Prediction Results")
 
         res_c1, res_c2 = st.columns(2)
         with res_c1:
@@ -756,8 +756,8 @@ with tab3:
         st.markdown(f"**Estimated Arrival:** `{pd.to_datetime(sim_res['predicted_eta']).strftime('%d %b %Y, %H:%M UTC')}`")
 
         # Congestion Sensitivity Curve
-        st.markdown("##### 📈 Terminal Congestion Sensitivity Curve")
-        st.caption("How predicted delay shifts as terminal congestion ranges from 0.0 (empty) to 1.0 (gridlock):")
+        st.markdown("##### 📈 Terminal Congestion Sensitivity Curve (Model Scenario)")
+        st.caption("Hypothetical model projection: predicted delay trajectory as terminal congestion varies from 0.0 to 1.0 (all other scenario inputs held fixed).")
 
         sensitivity_points = []
         for c_val in np.linspace(0.0, 1.0, 11):
@@ -782,10 +782,15 @@ with tab3:
         st.altair_chart(sens_chart, width="stretch")
 
 # =========================================================================
-# TAB 4: MODEL PERFORMANCE & METHODOLOGY
+# TAB 4: MODEL EVALUATION
 # =========================================================================
 with tab4:
-    st.subheader("Model Performance, Benchmarking & Technical Methodology")
+    st.markdown("### Model Evaluation, Benchmarking & Technical Methodology")
+    st.markdown("""
+    <div style="background: rgba(234, 179, 8, 0.12); border-left: 4px solid #eab308; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 0.88rem;">
+        <strong>⚠️ Synthetic Benchmark Disclaimer:</strong> These metrics reflect a controlled synthetic simulation (N=300, 75/25 train/test split) designed to validate event-time mechanics and target leakage prevention. They demonstrate model performance against baselines but do not represent real-world operational validation.
+    </div>
+    """, unsafe_allow_html=True)
 
     metrics = bundle["metrics"]
     reg_m = metrics["regression"]
@@ -830,7 +835,7 @@ with tab4:
             ).encode(x='x:Q', y='y:Q')
 
             st.altair_chart(scatter + line_ref, width="stretch")
-            st.caption("Points closer to the red dashed line reflect accurate predictions.")
+            st.caption("Points closer to the red dashed line reflect accurate predictions on the held-out test set.")
         else:
             st.info("Retrain the model to populate the held-out parity sample.")
 
@@ -850,7 +855,7 @@ with tab4:
         st.caption("Derived from MDI across all decision trees in the ensemble.")
 
     # Classification Confusion Matrix & Interval Coverage
-    st.markdown("#### 📋 Classification Performance & Uncertainty Calibration")
+    st.markdown("#### 📋 Classification Performance & Uncertainty Coverage")
     c_m1, c_m2, c_m3 = st.columns(3)
     with c_m1:
         st.markdown(f"**Classification Accuracy:** `{cls_m['accuracy']*100:.1f}%`")
@@ -864,7 +869,7 @@ with tab4:
         st.markdown(f"- False Negatives (Missed Late): `{cm[1][0]}`")
         st.markdown(f"- True Positives (Caught Late): `{cm[1][1]}`")
     with c_m3:
-        st.markdown(f"**Prediction Interval Calibration:**")
+        st.markdown(f"**Prediction Interval Uncertainty Spread:**")
         st.markdown(f"- Method: `{pi_m.get('method', 'out_of_bag_residual_quantiles')}`")
         st.markdown(f"- Nominal Target: `{pi_m['nominal_confidence']*100:.0f}%`")
         st.markdown(f"- **Empirical Test Coverage:** `{pi_m['empirical_test_coverage']*100:.1f}%`")
@@ -879,3 +884,4 @@ with tab4:
     - **Baselines Compared:** Evaluated against both a naive assumption (zero remaining delay) and an operational heuristic (observed upstream delay + median historical residual).
     - **Production Translation Requirements:** In an operational deployment, this prototype would be extended with real-time AIS vessel tracking feeds, terminal gate API logs, weather satellite forecasts, and time-split backtesting.
     """)
+
