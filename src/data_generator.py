@@ -62,69 +62,67 @@ def generate_shipments(n: int = 300, seed: int = 42) -> pd.DataFrame:
         teu = int(rng.integers(1200, 18500))
 
         # ---------------------------------------------------------
-        # 1. Planned Durations (hours)
+        # 1. Planned Durations (hours, rounded to 2 decimals)
         # ---------------------------------------------------------
         scheduled_departure = start + pd.Timedelta(hours=int(rng.integers(0, 24 * 365)))
-        planned_sailing = float(rng.uniform(72, 360))
-        planned_port = float(rng.uniform(8, 36))
-        planned_customs = float(rng.uniform(4, 24))
-        planned_final = float(rng.uniform(12, 60))
-        planned_departure = 0.0  # Scheduled departure is the baseline milestone
+        planned_sailing = round(float(rng.uniform(72, 360)), 2)
+        planned_port = round(float(rng.uniform(8, 36)), 2)
+        planned_customs = round(float(rng.uniform(4, 24)), 2)
+        planned_final = round(float(rng.uniform(12, 60)), 2)
         
         # Scheduled Arrival = Scheduled Departure + sum of planned stage durations
-        scheduled_arrival = scheduled_departure + pd.Timedelta(
-            hours=planned_sailing + planned_port + planned_customs + planned_final
-        )
+        planned_total_hours = round(planned_sailing + planned_port + planned_customs + planned_final, 2)
+        scheduled_arrival = scheduled_departure + pd.to_timedelta(planned_total_hours, unit="h")
 
         # ---------------------------------------------------------
         # 2. Environmental & Operational Signals (0.0 to 1.0)
         # ---------------------------------------------------------
-        congestion = float(rng.beta(2.2, 2.2))
-        weather = float(rng.beta(1.8, 3.2))
+        congestion = round(float(rng.beta(2.2, 2.2)), 3)
+        weather = round(float(rng.beta(1.8, 3.2)), 3)
 
         # ---------------------------------------------------------
-        # 3. Incremental Stage Delays (hours)
+        # 3. Incremental Stage Delays (hours, rounded to 2 decimals)
         # Each stage delay represents incremental friction added at that stage.
         # ---------------------------------------------------------
-        departure_delay = max(0.0, float(rng.normal(2.0 + 8.5 * weather, 4.5)))
-        sailing_delay = max(0.0, float(rng.normal(3.0 + 13.5 * weather + 0.15 * departure_delay, 6.0)))
-        port_delay = max(0.0, float(rng.normal(2.0 + 26.0 * congestion + 0.22 * sailing_delay, 7.5)))
-        customs_delay = max(0.0, float(rng.normal(1.5 + 13.0 * congestion + 0.18 * port_delay, 5.0)))
-        final_delay = max(0.0, float(rng.normal(1.0 + 0.12 * customs_delay + 3.0 * weather, 4.0)))
+        departure_delay = round(max(0.0, float(rng.normal(2.0 + 8.5 * weather, 4.5))), 2)
+        sailing_delay = round(max(0.0, float(rng.normal(3.0 + 13.5 * weather + 0.15 * departure_delay, 6.0))), 2)
+        port_delay = round(max(0.0, float(rng.normal(2.0 + 26.0 * congestion + 0.22 * sailing_delay, 7.5))), 2)
+        customs_delay = round(max(0.0, float(rng.normal(1.5 + 13.0 * congestion + 0.18 * port_delay, 5.0))), 2)
+        final_delay = round(max(0.0, float(rng.normal(1.0 + 0.12 * customs_delay + 3.0 * weather, 4.0))), 2)
 
         # Actual stage durations (hours)
-        actual_sailing_hours = planned_sailing + sailing_delay
-        actual_port_hours = planned_port + port_delay
-        actual_customs_hours = planned_customs + customs_delay
-        actual_final_hours = planned_final + final_delay
+        actual_sailing_hours = round(planned_sailing + sailing_delay, 2)
+        actual_port_hours = round(planned_port + port_delay, 2)
+        actual_customs_hours = round(planned_customs + customs_delay, 2)
+        actual_final_hours = round(planned_final + final_delay, 2)
 
         # ---------------------------------------------------------
         # 4. Cumulative Schedule Deviations (Inherited Delays)
         # Cumulative delay at milestone = sum of incremental delays up to that point.
         # No double counting: cumulative delay reflects calendar slippage.
         # ---------------------------------------------------------
-        cum_delay_departure = departure_delay
-        cum_delay_port_arrival = departure_delay + sailing_delay  # Checkpoint: Observed Upstream Delay
-        cum_delay_port_departure = cum_delay_port_arrival + port_delay
-        cum_delay_customs_done = cum_delay_port_departure + customs_delay
-        total_delay = cum_delay_customs_done + final_delay       # Ground Truth Total Delay
+        cum_delay_departure = round(departure_delay, 2)
+        cum_delay_port_arrival = round(departure_delay + sailing_delay, 2)  # Checkpoint: Observed Upstream Delay
+        cum_delay_port_departure = round(cum_delay_port_arrival + port_delay, 2)
+        cum_delay_customs_done = round(cum_delay_port_departure + customs_delay, 2)
+        total_delay = round(cum_delay_customs_done + final_delay, 2)       # Ground Truth Total Delay
 
-        remaining_delay_at_checkpoint = port_delay + customs_delay + final_delay
+        remaining_delay_at_checkpoint = round(port_delay + customs_delay + final_delay, 2)
 
         # ---------------------------------------------------------
         # 5. Planned vs Actual Timestamps (Chronological Event Sequencing)
         # ---------------------------------------------------------
         # Planned timeline
-        planned_port_arrival = scheduled_departure + pd.Timedelta(hours=planned_sailing)
-        planned_port_departure = planned_port_arrival + pd.Timedelta(hours=planned_port)
-        planned_customs_done = planned_port_departure + pd.Timedelta(hours=planned_customs)
+        planned_port_arrival = scheduled_departure + pd.to_timedelta(planned_sailing, unit="h")
+        planned_port_departure = planned_port_arrival + pd.to_timedelta(planned_port, unit="h")
+        planned_customs_done = planned_port_departure + pd.to_timedelta(planned_customs, unit="h")
 
-        # Actual timeline
-        actual_departure = scheduled_departure + pd.Timedelta(hours=departure_delay)
-        actual_port_arrival = planned_port_arrival + pd.Timedelta(hours=cum_delay_port_arrival)
-        actual_port_departure = planned_port_departure + pd.Timedelta(hours=cum_delay_port_departure)
-        actual_customs_done = planned_customs_done + pd.Timedelta(hours=cum_delay_customs_done)
-        actual_delivery = scheduled_arrival + pd.Timedelta(hours=total_delay)
+        # Actual timeline (using exact rounded incremental additions)
+        actual_departure = scheduled_departure + pd.to_timedelta(departure_delay, unit="h")
+        actual_port_arrival = planned_port_arrival + pd.to_timedelta(cum_delay_port_arrival, unit="h")
+        actual_port_departure = planned_port_departure + pd.to_timedelta(cum_delay_port_departure, unit="h")
+        actual_customs_done = planned_customs_done + pd.to_timedelta(cum_delay_customs_done, unit="h")
+        actual_delivery = scheduled_arrival + pd.to_timedelta(total_delay, unit="h")
 
         rows.append({
             "shipment_id": f"SHP-{i+1:04d}",
@@ -140,36 +138,36 @@ def generate_shipments(n: int = 300, seed: int = 42) -> pd.DataFrame:
             # Key milestones & environmental indicators
             "scheduled_departure": scheduled_departure,
             "scheduled_arrival": scheduled_arrival,
-            "port_congestion": round(congestion, 3),
-            "weather_severity": round(weather, 3),
+            "port_congestion": congestion,
+            "weather_severity": weather,
             
             # Planned stage durations (hours)
-            "planned_sailing_hours": round(planned_sailing, 2),
-            "planned_port_hours": round(planned_port, 2),
-            "planned_customs_hours": round(planned_customs, 2),
-            "planned_final_hours": round(planned_final, 2),
+            "planned_sailing_hours": planned_sailing,
+            "planned_port_hours": planned_port,
+            "planned_customs_hours": planned_customs,
+            "planned_final_hours": planned_final,
             "planned_remaining_hours_at_port": round(planned_port + planned_customs + planned_final, 2),
 
             # Actual stage durations (hours)
-            "actual_sailing_hours": round(actual_sailing_hours, 2),
-            "actual_port_hours": round(actual_port_hours, 2),
-            "actual_customs_hours": round(actual_customs_hours, 2),
-            "actual_final_hours": round(actual_final_hours, 2),
+            "actual_sailing_hours": actual_sailing_hours,
+            "actual_port_hours": actual_port_hours,
+            "actual_customs_hours": actual_customs_hours,
+            "actual_final_hours": actual_final_hours,
 
             # Incremental stage delays (hours)
-            "departure_delay_hours": round(departure_delay, 2),
-            "sailing_delay_hours": round(sailing_delay, 2),
-            "port_delay_hours": round(port_delay, 2),
-            "customs_delay_hours": round(customs_delay, 2),
-            "final_stage_delay_hours": round(final_delay, 2),
+            "departure_delay_hours": departure_delay,
+            "sailing_delay_hours": sailing_delay,
+            "port_delay_hours": port_delay,
+            "customs_delay_hours": customs_delay,
+            "final_stage_delay_hours": final_delay,
 
             # Cumulative schedule deviations at milestones (hours)
-            "cum_delay_departure_hours": round(cum_delay_departure, 2),
-            "observed_delay_at_port_hours": round(cum_delay_port_arrival, 2),  # Checkpoint milestone
-            "cum_delay_port_departure_hours": round(cum_delay_port_departure, 2),
-            "cum_delay_customs_done_hours": round(cum_delay_customs_done, 2),
-            "actual_total_delay_hours": round(total_delay, 2),                  # Target variable
-            "actual_remaining_delay_hours": round(remaining_delay_at_checkpoint, 2),
+            "cum_delay_departure_hours": cum_delay_departure,
+            "observed_delay_at_port_hours": cum_delay_port_arrival,  # Checkpoint milestone
+            "cum_delay_port_departure_hours": cum_delay_port_departure,
+            "cum_delay_customs_done_hours": cum_delay_customs_done,
+            "actual_total_delay_hours": total_delay,                  # Target variable
+            "actual_remaining_delay_hours": remaining_delay_at_checkpoint,
 
             # Planned event timestamps
             "planned_port_arrival": planned_port_arrival,
@@ -227,13 +225,13 @@ def validate_shipments_dataset(df: pd.DataFrame) -> None:
         df["customs_delay_hours"] +
         df["final_stage_delay_hours"]
     ).round(2)
-    mismatch = (stage_sum - df["actual_total_delay_hours"].round(2)).abs() > 0.05
+    mismatch = (stage_sum - df["actual_total_delay_hours"].round(2)).abs() > 0.01
     if mismatch.any():
         raise ValueError(f"Stage delay sum does not match actual_total_delay_hours for {mismatch.sum()} rows")
 
     # 3. Observed upstream delay at port checkpoint check
     upstream_sum = (df["departure_delay_hours"] + df["sailing_delay_hours"]).round(2)
-    mismatch_up = (upstream_sum - df["observed_delay_at_port_hours"].round(2)).abs() > 0.05
+    mismatch_up = (upstream_sum - df["observed_delay_at_port_hours"].round(2)).abs() > 0.01
     if mismatch_up.any():
         raise ValueError(f"Upstream delay sum does not match observed_delay_at_port_hours for {mismatch_up.sum()} rows")
 
