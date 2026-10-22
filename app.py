@@ -417,10 +417,10 @@ with tab1:
     )
 
 # =========================================================================
-# TAB 2: SHIPMENT ROOT-CAUSE DEEP-DIVE & OPERATOR DECISION SUPPORT
+# TAB 2: SHIPMENT ANALYSIS
 # =========================================================================
 with tab2:
-    st.subheader("Individual Journey Deep-Dive & Root-Cause Attribution")
+    st.markdown("### Individual Journey Analysis & Root-Cause Attribution")
 
     # Select shipment
     shipment_options = joined["shipment_id"].tolist()
@@ -531,7 +531,7 @@ with tab2:
         <div class="metric-card">
             <div class="metric-label">Probability of Delay > 24h</div>
             <div class="metric-value" style="font-size:1.45rem;">{single_res['late_probability'] * 100:.1f}%</div>
-            <div class="metric-delta" style="color:#94a3b8;">Calibrated classification score</div>
+            <div class="metric-delta" style="color:#94a3b8;">Ensemble late probability</div>
         </div>
         """, unsafe_allow_html=True)
     with col_pred4:
@@ -577,7 +577,7 @@ with tab2:
         </div>
         """, unsafe_allow_html=True)
 
-    # 4. STAGE WATERFALL & TREE SHAP ATTRIBUTIONS
+    # 4. STAGE WATERFALL & TREE FEATURE ATTRIBUTIONS
     col_left, col_right = st.columns([1.1, 1])
 
     with col_left:
@@ -609,9 +609,27 @@ with tab2:
         st.caption("Bar height: Incremental delay added at that stage. Yellow line: Cumulative schedule deviation (inherited delay).")
 
     with col_right:
-        st.markdown("#### 5. 🌲 Tree SHAP Feature Attribution (Hours Contributed)")
+        st.markdown("#### 5. 🌲 Tree Path Feature Attribution (Hours Contributed)")
         attributions = single_res["tree_attributions"]["attributions"]
         attr_df = pd.DataFrame(attributions).head(7)
+
+        attr_chart = alt.Chart(attr_df).mark_bar(cornerRadius=4).encode(
+            x=alt.X("impact_hours:Q", title="Impact on ETA Delay (Hours)"),
+            y=alt.Y("label:N", sort=alt.EncodingSortField(field="impact_hours", op="sum", order="descending"), title=""),
+            color=alt.condition(
+                alt.datum.impact_hours > 0,
+                alt.value("#ef4444"),  # Pushes ETA later
+                alt.value("#22c55e")   # Buffers / reduces delay
+            ),
+            tooltip=[
+                alt.Tooltip("label:N", title="Factor"),
+                alt.Tooltip("value:Q", title="Observed Value", format=".2f"),
+                alt.Tooltip("impact_hours:Q", title="Impact on Prediction (h)", format="+.2f"),
+                alt.Tooltip("direction:N", title="Effect")
+            ]
+        ).properties(height=300)
+        st.altair_chart(attr_chart, width="stretch")
+        st.caption("Red bars: Factors pushing arrival later. Green bars: Factors reducing delay. Decomposes decision tree splits relative to dataset baseline (explains model prediction, not interventional causal proof).")
 
         attr_chart = alt.Chart(attr_df).mark_bar(cornerRadius=4).encode(
             x=alt.X("impact_hours:Q", title="Impact on ETA Delay (Hours)"),
