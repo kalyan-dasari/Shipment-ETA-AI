@@ -189,9 +189,9 @@ Shipment-ETA-AI/
 │   ├── __init__.py
 │   ├── data_generator.py       # 5-stage synthetic journey generator with cascading delays
 │   ├── features.py             # Checkpoint allowlist & target leakage prevention
-│   ├── train.py                # Model training, baseline benchmarking, and OOB calibration
+│   ├── train.py                # Model training, baseline benchmarking, and OOB intervals
 │   ├── predict.py              # In-flight prediction engine, ETA arithmetic, risk scoring
-│   ├── explain.py              # Tree SHAP path attributions & stage waterfall generator
+│   ├── explain.py              # Tree path feature attributions & stage waterfall generator
 │   └── generate_pdf_report.py  # Script generating the 3-page PDF technical report
 ├── reports/
 │   ├── TECHNICAL_REPORT.md     # Full technical report (6 sections + worked example)
