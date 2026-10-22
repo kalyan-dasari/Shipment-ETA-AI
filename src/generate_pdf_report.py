@@ -154,11 +154,11 @@ def generate_pdf():
             Delays propagate via linked causal equations where upstream delays compound downstream friction:
         </p>
         <div class="math-box">
-            &bull; Dep Delay: &Delta;dep = max(0, N(2.0 + 8.5*Weather, 4.5&sup2;))<br>
-            &bull; Sailing Delay: &Delta;sail = max(0, N(3.0 + 13.5*Weather + 0.15*&Delta;dep, 6.0&sup2;))<br>
-            &bull; Port Dwell Delay: &Delta;port = max(0, N(2.0 + 26.0*Congestion + 0.22*&Delta;sail, 7.5&sup2;))<br>
-            &bull; Customs Delay: &Delta;customs = max(0, N(1.5 + 13.0*Congestion + 0.18*&Delta;port, 5.0&sup2;))<br>
-            &bull; Final Delivery Delay: &Delta;final = max(0, N(1.0 + 0.12*&Delta;customs + 3.0*Weather, 4.0&sup2;))
+            - Dep Delay: &Delta;dep = max(0, N(2.0 + 8.5*Weather, 4.5&sup2;))<br>
+            - Sailing Delay: &Delta;sail = max(0, N(3.0 + 13.5*Weather + 0.15*&Delta;dep, 6.0&sup2;))<br>
+            - Port Dwell Delay: &Delta;port = max(0, N(2.0 + 26.0*Congestion + 0.22*&Delta;sail, 7.5&sup2;))<br>
+            - Customs Delay: &Delta;customs = max(0, N(1.5 + 13.0*Congestion + 0.18*&Delta;port, 5.0&sup2;))<br>
+            - Final Delivery Delay: &Delta;final = max(0, N(1.0 + 0.12*&Delta;customs + 3.0*Weather, 4.0&sup2;))
         </div>
         <p>
             Congestion and weather are continuous simulated signals on a 0.0 to 1.0 scale.
@@ -177,7 +177,7 @@ def generate_pdf():
             <li><strong>Late-Delivery Label:</strong> 1 if Total Delay &gt; 24.0 hours; otherwise 0.</li>
             <li><strong>Predicted Final ETA:</strong> <code>Scheduled ETA + Predicted Total Delay</code>.</li>
         </ul>
-        <div class="footer">Page 1 of 3 &bull; Shipment ETA Intelligence &bull; Kalyan Dasari</div>
+        <div class="footer">Page 1 of 3 | Shipment ETA Intelligence | Kalyan Dasari</div>
     </body>
     """
 
@@ -300,7 +300,7 @@ def generate_pdf():
         <p>
             Top model drivers: <code>port_congestion</code> (21.42%), <code>observed_delay_at_port_hours</code> (14.26%), <code>congestion_weather_interaction</code> (13.37%), <code>sailing_delay_hours</code> (9.79%), <code>upstream_delay_ratio</code> (7.69%), <code>congestion_buffer_ratio</code> (7.53%).
         </p>
-        <div class="footer">Page 2 of 3 &bull; Shipment ETA Intelligence &bull; Kalyan Dasari</div>
+        <div class="footer">Page 2 of 3 | Shipment ETA Intelligence | Kalyan Dasari</div>
     </body>
     """
 
@@ -359,7 +359,7 @@ def generate_pdf():
             <li><strong>Conformal Prediction:</strong> Implement split conformal prediction to provide distribution-free, guaranteed coverage on prediction intervals.</li>
             <li><strong>Transshipment Graph Architecture:</strong> Model multi-leg container feeder networks via Graph Neural Networks (GNNs).</li>
         </ul>
-        <div class="footer">Page 3 of 3 &bull; Shipment ETA Intelligence &bull; Kalyan Dasari &bull; 22 October 2026</div>
+        <div class="footer">Page 3 of 3 | Shipment ETA Intelligence | Kalyan Dasari | 22 October 2026</div>
     </body>
     """
 
