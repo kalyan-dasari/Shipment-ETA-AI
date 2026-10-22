@@ -1,4 +1,4 @@
-"""Generate a publication-quality 3-page PDF technical report from the assignment report."""
+"""Generate a publication-quality 3-page PDF technical report aligned with assignment requirements."""
 from pathlib import Path
 import pymupdf
 
@@ -17,13 +17,13 @@ def generate_pdf():
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: #1e293b;
             font-size: 8.5pt;
-            line-height: 1.35;
+            line-height: 1.34;
             margin: 0;
             padding: 0;
         }
         h1 {
             color: #0f172a;
-            font-size: 15pt;
+            font-size: 14.5pt;
             font-weight: 700;
             margin: 0 0 4px 0;
             padding-bottom: 3px;
@@ -33,7 +33,7 @@ def generate_pdf():
             color: #0369a1;
             font-size: 10.5pt;
             font-weight: 700;
-            margin: 8px 0 3px 0;
+            margin: 7px 0 3px 0;
             border-bottom: 1px solid #e2e8f0;
             padding-bottom: 2px;
         }
@@ -58,7 +58,7 @@ def generate_pdf():
             width: 100%;
             border-collapse: collapse;
             font-size: 7.8pt;
-            margin: 4px 0 6px 0;
+            margin: 4px 0 5px 0;
         }
         th, td {
             border: 1px solid #cbd5e1;
@@ -84,8 +84,8 @@ def generate_pdf():
         .meta-box {
             background-color: #f8fafc;
             border-left: 3px solid #0284c7;
-            padding: 5px 8px;
-            margin-bottom: 6px;
+            padding: 4px 8px;
+            margin-bottom: 5px;
             font-size: 8pt;
         }
         .callout {
@@ -101,7 +101,7 @@ def generate_pdf():
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
             padding: 4px 8px;
-            margin: 4px 0;
+            margin: 3px 0;
             font-family: Consolas, Monaco, monospace;
             font-size: 7.8pt;
             border-radius: 3px;
@@ -112,12 +112,12 @@ def generate_pdf():
             text-align: center;
             border-top: 1px solid #e2e8f0;
             padding-top: 3px;
-            margin-top: 6px;
+            margin-top: 5px;
         }
     </style>
     """
 
-    # PAGE 1: Problem, Synthetic Cascade, and Definitions
+    # PAGE 1: Problem, Synthetic 5-Stage Cascade, and Prediction Checkpoint Definitions
     page1_html = css + """
     <body>
         <h1>Technical Report: Predicting Shipment ETA & Delay Propagation</h1>
@@ -128,18 +128,18 @@ def generate_pdf():
             <strong>Split:</strong> 25% Stratified Test ($N=75$)
         </div>
 
-        <h2>1. Problem Statement & Practical Motivation</h2>
+        <h2>1. Problem and Practical Motivation</h2>
         <p>
-            In international maritime shipping, schedule disruptions cascade through downstream supply chain stages. A minor delay during vessel loading or ocean sailing triggers missed berthing windows, port congestion, customs clearance queues, and missed inland rail/truck connections. Traditional visibility platforms rely on static schedule tables or naive projections that assume zero future downstream delay.
+            In international maritime shipping, schedule disruptions cascade through downstream supply chain stages. A minor delay during origin vessel loading or ocean transit triggers missed berthing windows, port congestion, customs clearance queues, and missed inland rail/truck connections. Traditional visibility platforms rely on static schedule tables or naive linear projections that assume zero future downstream delay.
         </p>
         <p>
             This system models the <strong>Port Arrival Checkpoint</strong> (outer pilot station): predicting total final delay and expected arrival timestamp while the voyage is in-progress. This enables logistics dispatchers to proactively: (1) notify consignees with calibrated revised ETAs, (2) request priority berthing or off-dock container drayage to avoid yard dwell, (3) pre-lodge customs manifests (EDI), and (4) reschedule inland drayage to prevent costly port demurrage and detention charges.
         </p>
         <div class="callout">
-            <em>Notice on Synthetic Data:</em> All data and dynamics are simulated. Performance metrics measure consistency with the underlying simulation mechanics rather than empirical real-world carrier accuracy.
+            <em>Notice on Synthetic Data:</em> All data and dynamics are simulated. Performance metrics measure consistency with the underlying simulation mechanics rather than empirical real-world carrier accuracy. The model provides decision support and does not claim to automatically prevent physical delays.
         </div>
 
-        <h2>2. Data Source & Synthetic Generation Assumptions</h2>
+        <h2>2. Synthetic Data and Five-Stage Delay Model</h2>
         <p>
             The dataset models 300 journeys across realistic trade lanes (Shanghai–Rotterdam, Singapore–Sydney, Mumbai–Dubai, Los Angeles–Hamburg, Busan–Antwerp) and container carriers (Maersk, MSC, CMA CGM, Hapag-Lloyd, ONE). The journey comprises five discrete stages:
         </p>
@@ -147,8 +147,8 @@ def generate_pdf():
             <li><strong>Stage 1 (Departure handling):</strong> Terminal loading and vessel dispatch.</li>
             <li><strong>Stage 2 (Ocean sailing):</strong> Deep-sea navigational voyage.</li>
             <li><strong>Stage 3 (Port processing):</strong> Anchorage waiting, berthing, and crane discharge.</li>
-            <li><strong>Stage 4 (Customs clearance):</strong> Regulatory document and physical inspection.</li>
-            <li><strong>Stage 5 (Final delivery):</strong> Inland drayage/rail transit to destination.</li>
+            <li><strong>Stage 4 (Customs clearance):</strong> Regulatory document and physical cargo inspection.</li>
+            <li><strong>Stage 5 (Final delivery):</strong> Inland drayage/rail transit to destination consignee.</li>
         </ul>
         <p>
             Delays propagate via linked causal equations where upstream delays compound downstream friction:
@@ -160,11 +160,8 @@ def generate_pdf():
             - Customs Delay: &Delta;customs = max(0, N(1.5 + 13.0*Congestion + 0.18*&Delta;port, 5.0&sup2;))<br>
             - Final Delivery Delay: &Delta;final = max(0, N(1.0 + 0.12*&Delta;customs + 3.0*Weather, 4.0&sup2;))
         </div>
-        <p>
-            Congestion and weather are continuous simulated signals on a 0.0 to 1.0 scale.
-        </p>
 
-        <h2>3. ETA, Stage-Delay, Cumulative-Delay & Ground-Truth Definitions</h2>
+        <h2>3. Prediction Checkpoint and Mathematical Definitions</h2>
         <p>
             To prevent accidental double-counting, the event-time model formally distinguishes <strong>incremental stage delay</strong> from <strong>cumulative schedule deviation</strong>:
         </p>
@@ -177,30 +174,19 @@ def generate_pdf():
             <li><strong>Late-Delivery Label:</strong> 1 if Total Delay &gt; 24.0 hours; otherwise 0.</li>
             <li><strong>Predicted Final ETA:</strong> <code>Scheduled ETA + Predicted Total Delay</code>.</li>
         </ul>
+        <p>
+            <em>Feature Allowlist vs. Leakage Guard:</em> Only 13 checkpoint-available features are used (planned durations, observed upstream delays, port congestion, weather severity, and engineered interaction ratios). All 14 downstream actuals are strictly stripped.
+        </p>
         <div class="footer">Page 1 of 3 | Shipment ETA Intelligence | Kalyan Dasari</div>
     </body>
     """
 
-    # PAGE 2: Feature Design, Modeling Protocol, and Empirical Evaluation Results
+    # PAGE 2: Model and Evaluation (Regression Comparison, Classification, Calibration)
     page2_html = css + """
     <body>
-        <h2>4. Prediction Checkpoint & Feature Design</h2>
+        <h2>4. Model and Evaluation</h2>
         <p>
-            Predictions occur strictly at the <strong>Port Arrival Checkpoint</strong>. All downstream actuals are strictly withheld to eliminate target leakage. The feature pipeline enforces an explicit allowlist:
-        </p>
-        <ul>
-            <li><strong>Schedule Baselines:</strong> <code>planned_sailing_hours</code> (72–360h), <code>planned_port_hours</code> (8–36h), <code>planned_customs_hours</code> (4–24h), <code>planned_final_hours</code> (12–60h), <code>planned_remaining_hours_at_port</code>.</li>
-            <li><strong>Observed Upstream History:</strong> <code>departure_delay_hours</code>, <code>sailing_delay_hours</code>, <code>observed_delay_at_port_hours</code> (&Delta;dep + &Delta;sail).</li>
-            <li><strong>Environmental Signals:</strong> <code>port_congestion</code> (0.0–1.0), <code>weather_severity</code> (0.0–1.0).</li>
-            <li><strong>Domain Interaction Features:</strong> <code>upstream_delay_ratio</code> (observed delay / planned sailing), <code>congestion_weather_interaction</code> (congestion &times; weather), <code>congestion_buffer_ratio</code> (congestion / planned port hours).</li>
-        </ul>
-        <p>
-            <em>Leakage Guard:</em> Automated tests verify that forbidden downstream columns (<code>port_delay_hours</code>, <code>customs_delay_hours</code>, <code>final_stage_delay_hours</code>, <code>actual_port_departure</code>, <code>actual_customs_done</code>, <code>actual_delivery</code>, <code>actual_total_delay_hours</code>, <code>late_delivery</code>) are strictly excluded from inputs.
-        </p>
-
-        <h2>5. Model Approach & Evaluation Protocol</h2>
-        <p>
-            The machine learning engine pairs regression delay estimation with calibrated delay-risk classification:
+            The machine learning engine pairs non-linear regression delay estimation with calibrated delay-risk classification, evaluated on a 25% stratified held-out test split (N=75 shipments, seed 42):
         </p>
         <ul>
             <li><strong>Random Forest Regressor:</strong> 300 decision trees, min_samples_leaf=2, max_features="sqrt", with Out-of-Bag (OOB) scoring to capture non-linear congestion interactions.</li>
@@ -209,10 +195,7 @@ def generate_pdf():
             <li><strong>Baselines:</strong> (A) Naive Baseline: assumes zero downstream delay (&Delta;remaining = 0); (B) Operational Heuristic: observed delay + training median downstream residual.</li>
         </ul>
 
-        <h2>6. Results Table Comparing Model with Baselines</h2>
-        <p>
-            Evaluated on a 25% stratified held-out test split (N=75 shipments; seed 42) from <code>artifacts/eta_model.metrics.json</code>:
-        </p>
+        <h3>4.1 Delay Regression Benchmark Results (Held-Out Test Set)</h3>
         <table>
             <thead>
                 <tr>
@@ -247,30 +230,33 @@ def generate_pdf():
                 </tr>
             </tbody>
         </table>
+        <p>
+            <em>Interpretation of MAE:</em> Mean Absolute Error measures the average error between predicted and actual delivery timestamps in hours. The Naive baseline fails catastrophically (MAE 29.17h) because downstream port dwell, customs inspection, and inland linehaul average over 18 hours. The Random Forest model reduces MAE to <strong>9.915 hours</strong>, explaining 42.2% of downstream delay variance.
+        </p>
 
-        <h3>Late-Delivery Classification Performance (&gt;24h Delay Threshold)</h3>
+        <h3>4.2 Late-Delivery Classification Performance (&gt;24.0h Delay Threshold)</h3>
         <table>
             <thead>
                 <tr>
                     <th>Metric</th>
                     <th>Measured Score</th>
-                    <th>Operational Interpretation</th>
+                    <th>Operational Interpretation in Supply Chain</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td><strong>Accuracy</strong></td>
-                    <td><strong>84.0%</strong></td>
-                    <td>Correctly predicts delay status on 63 out of 75 test shipments</td>
+                    <td><strong>84.0%</strong> (63/75)</td>
+                    <td>Correctly classifies delivery status on 63 out of 75 test shipments</td>
                 </tr>
                 <tr>
                     <td><strong>Precision</strong></td>
-                    <td><strong>87.3%</strong></td>
+                    <td><strong>87.3%</strong> (62/71)</td>
                     <td>87.3% of shipments flagged as late genuinely arrive late (low false alarms)</td>
                 </tr>
                 <tr>
                     <td><strong>Recall (Sensitivity)</strong></td>
-                    <td><strong>95.4%</strong></td>
+                    <td><strong>95.4%</strong> (62/65)</td>
                     <td>Captures 62 out of 65 severely delayed shipments (critical for SLA protection)</td>
                 </tr>
                 <tr>
@@ -281,7 +267,7 @@ def generate_pdf():
                 <tr>
                     <td><strong>ROC-AUC</strong></td>
                     <td><strong>0.780</strong></td>
-                    <td>Reliable risk discrimination across varying decision thresholds</td>
+                    <td>Reliable risk discrimination across varying operational decision thresholds</td>
                 </tr>
                 <tr>
                     <td><strong>Confusion Matrix</strong></td>
@@ -290,29 +276,28 @@ def generate_pdf():
                 </tr>
             </tbody>
         </table>
-
-        <h3>Uncertainty Interval Validation</h3>
         <p>
-            The Out-of-Bag residual quantiles achieved <strong>74.7% empirical coverage</strong> on the held-out test set (against a nominal 80.0% target). Because random forest errors are heteroscedastic, these intervals are labeled exploratory rather than formal conformal guarantees.
+            <em>Operational Decision Trade-Off:</em> In container shipping, a False Negative (failing to alert a consignee who then incurs idle labor or demurrage) is far more costly than a False Positive (initiating an early berth check for a shipment that clears on time). The model prioritizes high sensitivity (95.4% recall) to protect consignee SLAs.
         </p>
 
-        <h3>Global Feature Importances</h3>
+        <h3>4.3 Uncertainty Interval Validation & Global Feature Importances</h3>
         <p>
-            Top model drivers: <code>port_congestion</code> (21.42%), <code>observed_delay_at_port_hours</code> (14.26%), <code>congestion_weather_interaction</code> (13.37%), <code>sailing_delay_hours</code> (9.79%), <code>upstream_delay_ratio</code> (7.69%), <code>congestion_buffer_ratio</code> (7.53%).
+            The Out-of-Bag residual quantiles achieved <strong>74.7% empirical test coverage</strong> on the held-out test set (against a nominal 80.0% target). Because random forest errors are heteroscedastic across extreme congestion states, these intervals are labeled exploratory rather than exact conformal guarantees.
+        </p>
+        <p>
+            <em>Top Model Drivers (Tree MDI):</em> <code>port_congestion</code> (21.42%), <code>observed_delay_at_port_hours</code> (14.26%), <code>congestion_weather_interaction</code> (13.37%), <code>sailing_delay_hours</code> (9.79%), <code>upstream_delay_ratio</code> (7.69%), <code>congestion_buffer_ratio</code> (7.53%).
         </p>
         <div class="footer">Page 2 of 3 | Shipment ETA Intelligence | Kalyan Dasari</div>
     </body>
     """
 
-    # PAGE 3: Explainability, Worked Numerical Example, and Limitations / Roadmap
+    # PAGE 3: Worked Numerical Example and Limitations / Roadmap
     page3_html = css + """
     <body>
-        <h2>7. Explainability & Worked Numerical Shipment Example</h2>
+        <h2>5. Worked Shipment Example</h2>
         <p>
-            The system provides auditable explanations via exact <strong>Tree SHAP path decomposition</strong> (&ycirc; = &yuml; + &Sigma;&phi;j) and stage-by-stage waterfalls.
+            To provide auditable decision support, predictions are decomposed using exact <strong>Tree SHAP path attribution</strong> (&ycirc; = &yuml; + &Sigma;&phi;j) and 5-stage waterfalls. Evaluated on shipment <code>SHP-0001</code> from <code>data/shipments.csv</code>:
         </p>
-        
-        <h3>Worked Numerical Example: Shipment <code>SHP-0001</code></h3>
         <div class="callout">
             <strong>Voyage Profile:</strong> Vessel <em>Nordic Horizon</em> (CMA CGM Group, Route: Shanghai to Hamburg via Port Delta (Dubai)).<br>
             <strong>Scheduled Departure:</strong> 2025-03-15 12:00:00 UTC &nbsp;|&nbsp; <strong>Scheduled Arrival:</strong> 2025-04-02 00:09:36 UTC<br>
@@ -322,12 +307,12 @@ def generate_pdf():
             <strong>1. Checkpoint Observations (Port Arrival):</strong>
         </p>
         <ul>
-            <li>Departure delay: +3.35h &nbsp;|&nbsp; Sailing delay: +17.78h (severe weather: index 0.667).</li>
+            <li>Departure delay: +3.35h &nbsp;|&nbsp; Sailing delay: +17.78h (rough sea state: weather index 0.667).</li>
             <li><strong>Observed Upstream Delay at Checkpoint:</strong> +21.13 hours.</li>
             <li><strong>Terminal Indicators:</strong> Port Congestion = 0.228 (favorable) &nbsp;|&nbsp; Weather Severity = 0.667.</li>
         </ul>
         <p>
-            <strong>2. Model In-Flight Predictions (Checkpoint Output):</strong>
+            <strong>2. Model In-Flight Predictions (Inference Output):</strong>
         </p>
         <ul>
             <li><strong>Predicted Total Delay:</strong> +41.59 hours (Estimated Downstream Remaining: +20.46 hours).</li>
@@ -336,35 +321,37 @@ def generate_pdf():
             <li><strong>Tree SHAP Attributions:</strong> Observed Upstream Delay (+5.19h) and Sailing Delay (+3.39h) pushed ETA later, while favorable Port Congestion (-5.96h) and generous port buffer (-3.27h) cushioned downstream delay.</li>
         </ul>
         <p>
-            <strong>3. Unknown Future Actuals (Recorded Post-Delivery for Auditing):</strong>
+            <strong>3. Post-Delivery Historical Ground Truth (Withheld During Prediction):</strong>
         </p>
         <ul>
             <li>Downstream Actuals: Port Dwell Delay: +11.47h, Customs Delay: +5.60h, Final Delivery Delay: +0.95h.</li>
             <li><strong>Actual Total Delay:</strong> +39.15 hours (21.13h upstream + 18.02h downstream).</li>
             <li><strong>Ground-Truth Actual Delivery:</strong> 2025-04-03 15:18:36 UTC.</li>
             <li><strong>Model Error:</strong> |41.59h - 39.15h| = <strong>2.44 hours</strong> (The model predicted delivery within 2.5 hours of actual arrival).</li>
+            <li><strong>Exact Arithmetic Equality:</strong> Scheduled ETA (00:09:36) + Predicted Delay (41.59h) = Predicted ETA (17:45:00) [VERIFIED].</li>
         </ul>
 
-        <h2>8. Limitations & Real-World Deployment Requirements</h2>
-        <h3>8.1 Prototype Limitations</h3>
+        <h2>6. Limitations and Future Development</h2>
+        <h3>6.1 Prototype Limitations</h3>
         <ul>
             <li><strong>Synthetic Data:</strong> Delay propagation coefficients reflect mathematical simulation assumptions rather than empirical telemetry.</li>
-            <li><strong>Simplified Stationarity:</strong> Omits seasonality (e.g., Lunar New Year, peak retail shipping), vessel blank sailings, and transshipment hub connections.</li>
+            <li><strong>Simplified Stationarity:</strong> Omits seasonality (e.g. Lunar New Year, peak retail shipping), vessel blank sailings, and transshipment hub connections.</li>
             <li><strong>Discrete Checkpoint:</strong> Evaluates only at port arrival, rather than continuous real-time updates along the ocean route.</li>
         </ul>
-        <h3>8.2 Production Deployment Roadmap</h3>
+        <h3>6.2 Production Roadmap</h3>
         <ul>
-            <li><strong>Live Telemetry Ingestion:</strong> Connect live AIS GPS satellite feeds (Spire/MarineTraffic), ocean weather forecasts (Copernicus/NOAA), and Terminal Operating System (TOS) EDI messages.</li>
-            <li><strong>Rolling Temporal Validation:</strong> Replace random splits with temporal backtesting (train on months 1..T, test on month T+1) to detect data drift.</li>
+            <li><strong>Real-World Validation:</strong> Ingest historical completed shipments and test on temporal rolling holdouts across trade lanes.</li>
+            <li><strong>Operational Data Feeds:</strong> Connect live satellite AIS GPS feeds (Spire/MarineTraffic), ocean weather forecasts (NOAA), and Terminal Operating System (TOS) EDI messages.</li>
+            <li><strong>Event-Driven Updates:</strong> Recompute predictions dynamically as intermediate voyage milestones are logged.</li>
             <li><strong>Conformal Prediction:</strong> Implement split conformal prediction to provide distribution-free, guaranteed coverage on prediction intervals.</li>
-            <li><strong>Transshipment Graph Architecture:</strong> Model multi-leg container feeder networks via Graph Neural Networks (GNNs).</li>
+            <li><strong>Operational Pilot & KPI Measurement:</strong> Track data drift and measure operational KPIs including ETA error, unnecessary alerts, and avoided demurrage costs.</li>
         </ul>
         <div class="footer">Page 3 of 3 | Shipment ETA Intelligence | Kalyan Dasari | 22 October 2026</div>
     </body>
     """
 
     pages = [page1_html, page2_html, page3_html]
-    rect = pymupdf.Rect(36, 36, 595 - 36, 842 - 36)
+    rect = pymupdf.Rect(36, 34, 595 - 36, 842 - 34)
 
     for i, p_html in enumerate(pages):
         page = doc.new_page(width=595, height=842)
